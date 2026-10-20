@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-only
 # Starts server + web against a tmp copy of testkit/fixtures with fake drover.sh/zellij.
 # Usage: npm run test:e2e [-- <cmd...>]   no cmd: run until Ctrl-C; with cmd: run it, then tear down (exit = cmd's).
 # Env for <cmd>: E2E_URL (web), E2E_API, DROVER_ROOT (tmp fixtures; edit live), DROVER_CALLS (fake call log).

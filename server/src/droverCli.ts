@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import { execFile } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';

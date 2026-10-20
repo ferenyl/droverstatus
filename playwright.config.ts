@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import { defineConfig } from '@playwright/test';
 
 // Run via: npm run test:e2e -- npx playwright test

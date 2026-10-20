@@ -27,7 +27,7 @@ Default URL: http://127.0.0.1:4177
 | Var | Default |
 |---|---|
 | `DROVER_ROOT` | `~/.claude/drover` |
-| `DROVER_SH` | auto-discovered: `drover.sh` on `PATH`, else the newest `~/.claude/plugins/cache/*/*/skills/drover/scripts/drover.sh`; set it explicitly if neither applies |
+| `DROVER_SH` | `drover.sh` from `PATH`, else the newest `~/.claude/plugins/cache/*/*/*/skills/drover/scripts/drover.sh`; the server refuses to start if none is found |
 | `ZELLIJ_BIN` | `zellij` |
 | `PORT` | `4177` |
 

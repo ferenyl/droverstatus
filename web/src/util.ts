@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import type { Corral } from '@droverstatus/shared';
 
 export const relTime = (at?: string, now = Date.now()) => {

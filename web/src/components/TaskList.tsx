@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import type { Task } from '@droverstatus/shared';
 import { StateIcon } from './Icon';
 

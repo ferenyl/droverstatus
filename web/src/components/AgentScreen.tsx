@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { errMsg } from '../util';

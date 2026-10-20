@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import type { Corral } from '@droverstatus/shared';
 import { api } from '../api';
 import { badge, counts, errMsg } from '../util';

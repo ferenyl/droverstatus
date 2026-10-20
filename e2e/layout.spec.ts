@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import { mkdirSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
