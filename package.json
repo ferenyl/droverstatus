@@ -8,7 +8,8 @@
     "build": "npm run build -w web",
     "start": "npm run build && npm start -w server",
     "test": "vitest run",
-    "typecheck": "tsc -b server web shared"
+    "typecheck": "tsc -b server web shared",
+    "test:e2e": "bash testkit/e2e.sh"
   },
   "devDependencies": {
     "typescript": "^5.6.0",

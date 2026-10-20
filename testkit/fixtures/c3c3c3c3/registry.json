@@ -1,0 +1,15 @@
+{
+  "id": "c3c3c3c3",
+  "session": "corral-closed-c3c3c3c3",
+  "project": "/tmp/fake-closed",
+  "slug": "closed",
+  "drover_cwd": "/tmp/fake-closed",
+  "closed": true,
+  "drover": {
+    "mode": "live",
+    "model": "opus",
+    "session_id": "sid-drover",
+    "tab_id": 1
+  },
+  "agents": {}
+}
