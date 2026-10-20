@@ -1,9 +1,19 @@
 # droverstatus
 
-Local web UI for [drover](https://github.com/Ferenyl) corrals: live view of drovers, agents (busy/idle/blocked), tasks, messages and reports, plus create/close/revive corrals, kill agents, send messages and view agent screens. State is read from `~/.claude/drover/<HID>/`; all mutations go through `drover.sh`.
+Local web UI for drover (the `ferenyl-claude` plugin) corrals: live view of drovers, agents (busy/idle/blocked), tasks, messages and reports, plus create/close/revive corrals, kill agents, send messages and view agent screens. State is read from `~/.claude/drover/<HID>/`; all mutations go through `drover.sh`.
 
-## Prerequisites
-Node 22+, npm, `zellij`, and the drover skill's `drover.sh`.
+## Requirements
+- Linux or macOS
+- Node >= 22 and npm
+- [Zellij](https://zellij.dev)
+- The drover plugin `ferenyl-claude` >= 0.9.0 (provides `drover.sh`)
+
+## What this is not
+No authentication, no multi-user support, not for remote access. It is a localhost-only tool; see [SECURITY.md](SECURITY.md).
+
+## Screenshots
+![Overview](docs/screenshots/1440-dark-overview.png)
+![Board](docs/screenshots/1440-dark-board.png)
 
 ## Install / run
 ```
@@ -17,7 +27,7 @@ Default URL: http://127.0.0.1:4177
 | Var | Default |
 |---|---|
 | `DROVER_ROOT` | `~/.claude/drover` |
-| `DROVER_SH` | `~/projects/oss/claudeskills/plugins/ferenyl-claude/skills/drover/scripts/drover.sh` |
+| `DROVER_SH` | auto-discovered: `drover.sh` on `PATH`, else the newest `~/.claude/plugins/cache/*/*/skills/drover/scripts/drover.sh`; set it explicitly if neither applies |
 | `ZELLIJ_BIN` | `zellij` |
 | `PORT` | `4177` |
 
@@ -37,4 +47,7 @@ While it runs, in `$DROVER_ROOT`:
 - `.zellij-sessions` – edit to flip liveness (`(EXITED` = dead)
 
 ## Security
-The server binds to 127.0.0.1 only and rejects other `Host` headers. It can launch and stop agents, so do not expose it (no port forwarding or reverse proxy).
+See [SECURITY.md](SECURITY.md). The server binds to 127.0.0.1 only and rejects other `Host` headers. It can launch and stop agents, so do not expose it (no port forwarding or reverse proxy).
+
+## License
+GPL-3.0-only, see [LICENSE](LICENSE). Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
