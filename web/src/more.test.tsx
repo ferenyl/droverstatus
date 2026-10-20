@@ -37,8 +37,8 @@ describe('api/util', () => {
   });
   it('relTime and errMsg', () => {
     const now = Date.parse('2026-01-01T00:10:00Z');
-    expect(relTime('2026-01-01T00:09:30Z', now)).toBe('30s');
-    expect(relTime('2026-01-01T00:00:00Z', now)).toBe('10m');
+    expect(relTime('2026-01-01T00:09:30Z', now)).toBe('30s ago');
+    expect(relTime('2026-01-01T00:00:00Z', now)).toBe('10m ago');
     expect(relTime(undefined)).toBe('');
     expect(errMsg(new ApiFail({ error: 'e', stderr: 's' }, 500))).toBe('e: s');
   });

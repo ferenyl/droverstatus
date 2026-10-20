@@ -35,8 +35,10 @@ export function App() {
   const list = [...corrals.values()];
   const current = selected ? corrals.get(selected) : undefined;
   return (
-    <div className="app">
-      <span data-testid="conn-status">{connected ? 'online' : 'offline'}</span>
+    <div className="container-fluid py-3">
+      <div className="row g-3">
+      <div className="col-md-4 col-xl-3">
+      <span data-testid="conn-status" className={`badge mb-2 ${connected ? 'text-bg-success' : 'text-bg-danger'}`}>{connected ? 'online' : 'offline'}</span>
       <CorralList
         corrals={list}
         selected={selected}
@@ -45,6 +47,8 @@ export function App() {
         onSelect={(h) => { setSelected(h); setScreen(undefined); }}
         onNew={() => setNewOpen(true)}
       />
+      </div>
+      <div className="col-md-8 col-xl-9">
       {current ? (
         <>
           <CorralView corral={current} onScreen={setScreen} onClose={() => setClosing(true)} onError={setToast} />
@@ -52,10 +56,12 @@ export function App() {
           {closing && <CloseDialog hid={current.hid} onClose={() => setClosing(false)} />}
         </>
       ) : (
-        <p data-testid="empty">Välj en corral</p>
+        <p data-testid="empty" className="text-body-secondary">Select a corral</p>
       )}
+      </div>
+      </div>
       {newOpen && <NewDroverDialog onClose={() => setNewOpen(false)} onCreated={setSelected} />}
-      {toast && <div role="alert" data-testid="toast">{toast}</div>}
+      {toast && <div role="alert" data-testid="toast" className="alert alert-danger position-fixed bottom-0 end-0 m-3 shadow">{toast}</div>}
     </div>
   );
 }
