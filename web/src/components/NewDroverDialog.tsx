@@ -26,20 +26,20 @@ export function NewDroverDialog({ onClose, onCreated }: { onClose: () => void; o
     }
   };
   return (
-    <dialog open data-testid="new-drover-dialog">
-      <form onSubmit={submit}>
-        <label>slug <input data-testid="new-slug" value={slug} onChange={(e) => setSlug(e.target.value)} /></label>
-        <label>projektkatalog <input data-testid="new-dir" value={dir} onChange={(e) => setDir(e.target.value)} /></label>
+    <dialog open data-testid="new-drover-dialog" className="card p-3 shadow">
+      <form onSubmit={submit} className="vstack gap-2">
+        <label>slug <input className="form-control" data-testid="new-slug" value={slug} onChange={(e) => setSlug(e.target.value)} /></label>
+        <label>project directory <input className="form-control" data-testid="new-dir" value={dir} onChange={(e) => setDir(e.target.value)} /></label>
         <label>
-          modell
-          <select data-testid="new-model" value={model} onChange={(e) => setModel(e.target.value as Model)}>
+          model
+          <select className="form-select" data-testid="new-model" value={model} onChange={(e) => setModel(e.target.value as Model)}>
             {MODELS.map((m) => <option key={m}>{m}</option>)}
           </select>
         </label>
-        <label>brief <textarea data-testid="new-brief" value={brief} onChange={(e) => setBrief(e.target.value)} /></label>
-        {error && <p role="alert" data-testid="new-error">{error}</p>}
-        <button data-testid="new-submit" type="submit" disabled={!valid || busy}>Skapa</button>
-        <button data-testid="new-cancel" type="button" onClick={onClose}>Avbryt</button>
+        <label>brief <textarea className="form-control" data-testid="new-brief" value={brief} onChange={(e) => setBrief(e.target.value)} /></label>
+        {error && <p role="alert" data-testid="new-error" className="alert alert-danger mb-0">{error}</p>}
+        <button className="btn btn-primary" data-testid="new-submit" type="submit" disabled={!valid || busy}>Create</button>
+        <button className="btn btn-outline-secondary" data-testid="new-cancel" type="button" onClick={onClose}>Cancel</button>
       </form>
     </dialog>
   );

@@ -16,11 +16,11 @@ export function MessageFeed({ corral, onError }: { corral: Corral; onError: (m: 
     }
   };
   return (
-    <section data-testid="message-feed">
-      <ul>
+    <section data-testid="message-feed" className="my-3">
+      <ul className="list-unstyled small">
         {corral.messages.map((m, i) => (
           <li key={i} data-testid="message-item">
-            <time>{m.at}</time> [{m.from} → {m.to}] {m.text}
+            <time className="text-body-secondary">{m.at}</time> [{m.from} → {m.to}] {m.text}
           </li>
         ))}
       </ul>
@@ -30,9 +30,9 @@ export function MessageFeed({ corral, onError }: { corral: Corral; onError: (m: 
           <ul data-testid="inbox">{corral.inbox.map((l, i) => <li key={i}>{l}</li>)}</ul>
         </details>
       )}
-      <form onSubmit={send}>
-        <input data-testid="message-input" value={text} onChange={(e) => setText(e.target.value)} placeholder="Meddelande till drover" />
-        <button data-testid="message-send" type="submit">Skicka</button>
+      <form onSubmit={send} className="input-group">
+        <input className="form-control" data-testid="message-input" value={text} onChange={(e) => setText(e.target.value)} placeholder="Message to drover" />
+        <button className="btn btn-primary" data-testid="message-send" type="submit">Send</button>
       </form>
     </section>
   );
