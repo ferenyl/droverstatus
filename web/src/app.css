@@ -1,3 +1,7 @@
 dialog[open] { width: min(32rem, 92vw); }
 dialog::backdrop { background: rgba(0, 0, 0, .4); }
 tr.state-blocked { --bs-table-bg: var(--bs-warning-bg-subtle); }
+pre.screen { background: #111; color: #eee; padding: .75rem; margin: 0; }
+.tree-row { display: block; width: 100%; text-align: start; white-space: normal; border-radius: 0; }
+.tree > li, .tree-row { min-width: 0; }
+.min-w-0 { min-width: 0; }

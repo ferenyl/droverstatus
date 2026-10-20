@@ -18,8 +18,8 @@ export function AgentTable(p: { corral: Corral; onScreen: (id: string) => void; 
             <td>{relTime(a.status.at)}</td>
             <td>{a.purpose}</td>
             <td>
-              <button className="btn btn-sm btn-outline-primary me-1" data-testid={`agent-screen-${a.id}`} onClick={() => p.onScreen(a.id)}>Screen</button>
-              <button className="btn btn-sm btn-outline-danger" data-testid={`agent-kill-${a.id}`} onClick={() => p.onKill(a.id)}>Kill</button>
+              <button className="btn btn-sm btn-outline theme-primary me-1" data-testid={`agent-screen-${a.id}`} onClick={() => p.onScreen(a.id)}>Screen</button>
+              <button className="btn btn-sm btn-outline theme-danger" data-testid={`agent-kill-${a.id}`} onClick={() => p.onKill(a.id)}>Kill</button>
             </td>
           </tr>
         ))}

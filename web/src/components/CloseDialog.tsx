@@ -25,21 +25,21 @@ export function CloseDialog({ hid, onClose }: { hid: string; onClose: () => void
           <ul data-testid="worktree-list" className="list-group mb-3">
             {worktrees.map((w) => (
               <li key={w.path} data-testid="worktree-item" className="list-group-item">
-                {w.path} ({w.branch}) {w.dirty && <b data-testid="worktree-dirty" className="badge text-bg-warning">dirty</b>}
+                {w.path} ({w.branch}) {w.dirty && <b data-testid="worktree-dirty" className="badge theme-warning">dirty</b>}
               </li>
             ))}
           </ul>
-          <button className="btn btn-danger me-2" data-testid="close-remove" onClick={() => run('remove')}>Remove worktrees</button>
-          <button className="btn btn-primary me-2" data-testid="close-keep" onClick={() => run('keep')}>Keep worktrees</button>
+          <button className="btn btn-solid theme-danger me-2" data-testid="close-remove" onClick={() => run('remove')}>Remove worktrees</button>
+          <button className="btn btn-solid theme-primary me-2" data-testid="close-keep" onClick={() => run('keep')}>Keep worktrees</button>
         </>
       ) : (
         <>
           <p>Close drover {hid}?</p>
-          <button className="btn btn-danger me-2" data-testid="close-confirm" onClick={() => run()}>Close</button>
+          <button className="btn btn-solid theme-danger me-2" data-testid="close-confirm" onClick={() => run()}>Close</button>
         </>
       )}
-      {error && <p role="alert" data-testid="close-error" className="alert alert-danger mt-2">{error}</p>}
-      <button className="btn btn-outline-secondary" data-testid="close-cancel" onClick={onClose}>Cancel</button>
+      {error && <p role="alert" data-testid="close-error" className="alert theme-danger mt-2">{error}</p>}
+      <button className="btn btn-outline theme-secondary" data-testid="close-cancel" onClick={onClose}>Cancel</button>
     </Modal>
   );
 }

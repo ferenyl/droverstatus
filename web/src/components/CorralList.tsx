@@ -34,15 +34,15 @@ export function CorralList(p: {
       return n;
     });
   const list = p.corrals.filter((c) => p.showClosed || !c.closed);
-  const row = (active: boolean) => `btn btn-sm w-100 text-start rounded-0 ${active ? 'active' : ''}`;
+  const row = (active: boolean) => `btn btn-sm tree-row ${active ? 'active' : ''}`;
   return (
     <nav data-testid="corral-list" aria-label="Corrals">
-      <button className="btn btn-primary w-100 mb-2" data-testid="new-drover-btn" onClick={p.onNew}>New drover</button>
-      <label className="form-check mb-2">
-        <input className="form-check-input" type="checkbox" data-testid="show-closed" checked={p.showClosed} onChange={(e) => p.onShowClosed(e.target.checked)} />
-        <span className="form-check-label">show closed</span>
+      <button className="btn btn-solid theme-primary w-100 mb-2" data-testid="new-drover-btn" onClick={p.onNew}>New drover</button>
+      <label className="d-flex align-items-center gap-2 mb-2">
+        <input className="check" type="checkbox" data-testid="show-closed" checked={p.showClosed} onChange={(e) => p.onShowClosed(e.target.checked)} />
+        show closed
       </label>
-      <ul className="list-group">
+      <ul className="list-group tree">
         {list.map((c) => {
           const n = counts(c);
           const expanded = open.has(c.hid);
@@ -51,12 +51,12 @@ export function CorralList(p: {
             <li key={c.hid} data-testid={`tree-corral-${c.hid}`} className="list-group-item p-0">
               <div className="d-flex">
                 <button className="btn btn-sm" data-testid={`tree-toggle-${c.hid}`} aria-label={`${expanded ? 'Collapse' : 'Expand'} ${c.slug}`} aria-expanded={expanded} aria-controls={`tree-children-${c.hid}`} onClick={() => toggle(c.hid)}>{expanded ? '▾' : '▸'}</button>
-                <div className="flex-grow-1">
+                <div className="flex-grow-1 min-w-0">
                   <button className={row(sel && !p.node)} data-testid={`corral-item-${c.hid}`} aria-current={sel && !p.node ? 'true' : undefined} onClick={() => { p.onSelect(c.hid); setOpen((o) => new Set(o).add(c.hid)); }}>
                     <StatusIcon state={badge(c)} id={`corral-${c.hid}`} decorative />
                     <b>{c.slug}</b> <code>{c.hid}</code>{' '}
-                    <span data-testid={`badge-${c.hid}`} className={`badge ${badge(c) === 'alive' ? 'text-bg-success' : badge(c) === 'dead' ? 'text-bg-danger' : 'text-bg-secondary'}`}>{badge(c)}</span>{' '}
-                    <span data-testid={`counts-${c.hid}`} className="small">{n.busy} busy · {n.idle} idle · {n.blocked} blocked</span>
+                    <span data-testid={`badge-${c.hid}`} className={`badge ${badge(c) === 'alive' ? 'theme-success' : badge(c) === 'dead' ? 'theme-danger' : 'theme-secondary'}`}>{badge(c)}</span>{' '}
+                    <span data-testid={`counts-${c.hid}`} className="small d-block">{n.busy} busy · {n.idle} idle · {n.blocked} blocked</span>
                   </button>
                 </div>
               </div>

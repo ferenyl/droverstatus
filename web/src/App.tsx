@@ -40,8 +40,8 @@ export function App() {
   return (
     <div className="container-fluid py-3">
       <div className="row g-3">
-      <div className="col-md-4 col-xl-3">
-      <span data-testid="conn-status" className={`badge mb-2 ${connected ? 'text-bg-success' : 'text-bg-danger'}`}>{connected ? 'online' : 'offline'}</span>
+      <div className="md:col-4 xl:col-3">
+      <span data-testid="conn-status" className={`badge mb-2 ${connected ? 'theme-success' : 'theme-danger'}`}>{connected ? 'online' : 'offline'}</span>
       <CorralList
         corrals={list}
         selected={selected}
@@ -52,7 +52,7 @@ export function App() {
         onNew={() => setNewOpen(true)}
       />
       </div>
-      <main className="col-md-8 col-xl-9">
+      <main className="md:col-8 xl:col-9">
       {current ? (
         <>
           {node ? (
@@ -64,12 +64,12 @@ export function App() {
           {closing && <CloseDialog hid={current.hid} onClose={() => setClosing(false)} />}
         </>
       ) : (
-        <p data-testid="empty" className="text-body-secondary">Select a corral</p>
+        <p data-testid="empty" className="fg-3">Select a corral</p>
       )}
       </main>
       </div>
       {newOpen && <NewDroverDialog onClose={() => setNewOpen(false)} onCreated={(h) => { setSelected(h); setNode(undefined); }} />}
-      {toast && <div role="alert" data-testid="toast" className="alert alert-danger position-fixed bottom-0 end-0 m-3 shadow">{toast}</div>}
+      {toast && <div role="alert" data-testid="toast" className="alert theme-danger position-fixed bottom-0 end-0 m-3 shadow">{toast}</div>}
     </div>
   );
 }

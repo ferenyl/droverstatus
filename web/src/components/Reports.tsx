@@ -11,7 +11,7 @@ export function Reports({ hid, ids }: { hid: string; ids: string[] }) {
   return (
     <section data-testid="reports" className="my-3">
       {ids.map((id) => (
-        <button key={id} className="btn btn-sm btn-outline-secondary me-1" data-testid={`report-${id}`} onClick={() => setOpen(open === id ? undefined : id)}>{id}</button>
+        <button key={id} className="btn btn-sm btn-outline theme-secondary me-1" data-testid={`report-${id}`} onClick={() => setOpen(open === id ? undefined : id)}>{id}</button>
       ))}
       {open && <pre data-testid="report-body" className="border rounded p-2 mt-2 small">{md}</pre>}
     </section>

@@ -29,12 +29,12 @@ export function NodeDetail({ corral: c, node, onError }: { corral: Corral; node:
     );
   }
   const a: Agent | undefined = c.agents.find((x) => x.id === node.id);
-  if (!a) return <p data-testid="agent-gone" className="text-body-secondary">Agent {node.id} no longer exists</p>;
+  if (!a) return <p data-testid="agent-gone" className="fg-3">Agent {node.id} no longer exists</p>;
   return (
     <div data-testid="agent-detail">
       <h2 className="h4 d-flex justify-content-between">
-        <span>{a.id} <span data-testid="agent-detail-state" className="badge text-bg-secondary">{a.status.state}</span></span>
-        <button className="btn btn-sm btn-outline-danger" data-testid={`agent-kill-${a.id}`} onClick={() => api.kill(c.hid, a.id).catch((e) => onError(errMsg(e)))}>Kill</button>
+        <span>{a.id} <span data-testid="agent-detail-state" className="badge theme-secondary">{a.status.state}</span></span>
+        <button className="btn btn-sm btn-outline theme-danger" data-testid={`agent-kill-${a.id}`} onClick={() => api.kill(c.hid, a.id).catch((e) => onError(errMsg(e)))}>Kill</button>
       </h2>
       <Dl rows={[
         ['model', a.model ?? ''],

@@ -33,14 +33,14 @@ export function NewDroverDialog({ onClose, onCreated }: { onClose: () => void; o
         <label>project directory <input className="form-control" data-testid="new-dir" value={dir} onChange={(e) => setDir(e.target.value)} /></label>
         <label>
           model
-          <select className="form-select" data-testid="new-model" value={model} onChange={(e) => setModel(e.target.value as Model)}>
+          <select className="form-control" data-testid="new-model" value={model} onChange={(e) => setModel(e.target.value as Model)}>
             {MODELS.map((m) => <option key={m}>{m}</option>)}
           </select>
         </label>
         <label>brief <textarea className="form-control" data-testid="new-brief" value={brief} onChange={(e) => setBrief(e.target.value)} /></label>
-        {error && <p role="alert" data-testid="new-error" className="alert alert-danger mb-0">{error}</p>}
-        <button className="btn btn-primary" data-testid="new-submit" type="submit" disabled={!valid || busy}>Create</button>
-        <button className="btn btn-outline-secondary" data-testid="new-cancel" type="button" onClick={onClose}>Cancel</button>
+        {error && <p role="alert" data-testid="new-error" className="alert theme-danger mb-0">{error}</p>}
+        <button className="btn btn-solid theme-primary" data-testid="new-submit" type="submit" disabled={!valid || busy}>Create</button>
+        <button className="btn btn-outline theme-secondary" data-testid="new-cancel" type="button" onClick={onClose}>Cancel</button>
       </form>
     </Modal>
   );
