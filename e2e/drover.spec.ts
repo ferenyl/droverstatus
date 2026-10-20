@@ -172,14 +172,15 @@ test('reports and tasks view', async ({ page }) => {
   await page.getByTestId(`corral-item-${A}`).click();
   await page.getByTestId('tab-tasks').click();
   await expect(page.getByTestId('task-row-scaffold')).toContainText('done');
-  await expect(page.getByTestId('task-row-api')).toContainText('running');
+  await expect(page.getByTestId('task-row-api')).toContainText('in_progress');
   await expect(page.getByTestId('task-row-api')).toContainText('scaffold');
   await expect(page.getByTestId('task-row-review')).toContainText('failed');
   await expect(page.getByTestId('task-row-review')).toContainText('2');
   await page.getByTestId('tab-reports').click();
   await page.getByTestId('report-alpha').click();
-  const md = readFileSync(join(root, A, 'reports/alpha.md'), 'utf8').trim().split('\n')[0];
-  await expect(page.getByTestId('report-body')).toContainText(md.replace(/^#+\s*/, ''));
+  await expect(page.getByTestId('report-body')).toContainText('task');
+  await expect(page.getByTestId('report-field-status')).toHaveText('done');
+  await expect(page.getByTestId('report-field-summary')).toHaveText('ok');
   await page.getByTestId('report-alpha').click();
   await expect(page.getByTestId('report-body')).toHaveCount(0);
 });

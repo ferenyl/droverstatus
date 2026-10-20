@@ -1,6 +1,28 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 
+export const parseReport = (md: string): [string, string][] | undefined => {
+  const t = md.trim();
+  if (!t || t.includes('\n') || !t.includes(' | ')) return undefined;
+  const f = t.split(' | ').map((p) => {
+    const i = p.indexOf(':');
+    return i > 0 ? ([p.slice(0, i).trim(), p.slice(i + 1).trim()] as [string, string]) : undefined;
+  });
+  return f.every(Boolean) ? (f as [string, string][]) : undefined;
+};
+
+function ReportBody({ md }: { md: string }) {
+  const f = parseReport(md);
+  if (!f) return <pre data-testid="report-body" className="md">{md}</pre>;
+  return (
+    <div data-testid="report-body" className="card-x report">
+      <dl className="kv">
+        {f.map(([k, v]) => <><dt key={`k${k}`}>{k}</dt><dd key={`v${k}`} data-testid={`report-field-${k}`} className={k === 'status' ? `rs rs-${v}` : undefined}>{v}</dd></>)}
+      </dl>
+    </div>
+  );
+}
+
 export function Reports({ hid, ids, auto }: { hid: string; ids: string[]; auto?: boolean }) {
   const [picked, setPicked] = useState<string>();
   const [md, setMd] = useState('');
@@ -19,7 +41,7 @@ export function Reports({ hid, ids, auto }: { hid: string; ids: string[]; auto?:
           ))}
         </div>
       )}
-      {open && <pre data-testid="report-body" className="md">{md}</pre>}
+      {open && <ReportBody md={md} />}
     </section>
   );
 }

@@ -10,8 +10,8 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
         </thead>
         <tbody>
           {tasks.map((t) => (
-            <tr key={t.id} data-testid={`task-row-${t.id}`}>
-              <td className="mono">{t.id}</td><td>{t.title}</td><td><span className={`pill pill-task-${t.state}`}><StateIcon state={t.state === 'done' ? 'alive' : t.state === 'running' ? 'busy' : t.state === 'failed' ? 'dead' : 'idle'} />{t.state}</span></td><td>{t.owner}</td><td className="mono">{t.attempts ?? 0}</td>
+            <tr key={t.id} data-testid={`task-row-${t.id}`} className={(t.attempts ?? 0) >= 3 ? 'attempts-high' : undefined}>
+              <td className="mono">{t.id}</td><td>{t.title}</td><td><span className={`pill pill-task-${t.state}`}><StateIcon state={t.state === 'done' ? 'alive' : t.state === 'in_progress' ? 'busy' : t.state === 'failed' ? 'dead' : 'idle'} />{t.state}</span></td><td>{t.owner}</td><td className="mono" title={(t.attempts ?? 0) >= 3 ? 'Needs user attention' : undefined}>{t.attempts ?? 0}{(t.attempts ?? 0) >= 3 && <span data-testid={`task-attention-${t.id}`} className="pill pill-blocked">ask user</span>}</td>
               <td className="mono">{t.depends_on.join(', ')}</td>
             </tr>
           ))}

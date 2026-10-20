@@ -21,6 +21,7 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
       <PaneHeader
         crumbs={[<b key="s">{c.slug}</b>, <code key="h">{c.hid}</code>]}
         badge={<span data-testid="corral-badge" className={`pill pill-${badge(c)}`}><StateIcon state={badge(c)} />{badge(c)}</span>}
+        extra={c.closing && !c.closed && <span data-testid="corral-closing" className="pill pill-blocked">closing…</span>}
         actions={
           <>
             {!c.closed && c.liveness !== 'alive' && (

@@ -203,3 +203,22 @@ describe('AgentScreen error', () => {
     expect(f).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('compat', () => {
+  it('parses one-line report', async () => {
+    const { parseReport } = await import('./components/Reports');
+    expect(parseReport('task: x | status: done | summary: a: b')).toEqual([['task', 'x'], ['status', 'done'], ['summary', 'a: b']]);
+    expect(parseReport('# plain\nmore')).toBeUndefined();
+  });
+  it('in_progress, attempts>=3, closing, queued', () => {
+    const c = corral({ closing: true, messages: [{ at: 'x', from: 'drover', to: 'a', text: 'go (queued)' }],
+      tasks: [{ id: 't', title: 'T', acceptance: [], depends_on: [], state: 'in_progress', attempts: 3 }] });
+    render(<CorralView corral={c} tab="tasks" onTab={() => {}} onOpenAgent={() => {}} onClose={() => {}} onError={() => {}} />);
+    expect(screen.getByTestId('task-attention-t')).not.toBeNull();
+    expect(screen.getByTestId('task-row-t').textContent).toContain('in_progress');
+    expect(screen.getByTestId('corral-closing')).not.toBeNull();
+    cleanup();
+    render(<NodeDetail corral={c} node={{ kind: 'drover' }} tab="messages" onTab={() => {}} onError={() => {}} />);
+    expect(screen.getByTestId('msg-queued')).not.toBeNull();
+  });
+});

@@ -31,14 +31,14 @@ export function MessageFeed({ corral, messages = corral.messages, compose, onErr
       <ul className="msgs">
         {messages.map((m, i) => (
           <li key={i} data-testid="message-item">
-            <time className="mono muted">{m.at}</time> <span className="route">[{m.from} → {m.to}]</span> {m.text}
+            <time className="mono muted">{m.at}</time> <span className="route">[{m.from} → {m.to}]</span> {m.text.replace(/\s*\(queued\)$/, '')}{/\(queued\)\s*$/.test(m.text) && <span data-testid="msg-queued" className="pill pill-blocked">queued</span>}
           </li>
         ))}
       </ul>
       {messages === corral.messages && corral.inbox.length > 0 && (
         <details className="card-x">
           <summary>inbox ({corral.inbox.length})</summary>
-          <ul data-testid="inbox">{corral.inbox.map((l, i) => <li key={i}>{l}</li>)}</ul>
+          <ul data-testid="inbox" className="inbox">{corral.inbox.map((l, i) => <li key={i} className="mono">{l}</li>)}</ul>
         </details>
       )}
       {compose && <Composer hid={corral.hid} onError={onError} />}

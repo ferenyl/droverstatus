@@ -126,3 +126,9 @@ dialog::backdrop { background: rgba(0, 0, 0, .55); }
 .screen-off { flex: 1; display: grid; place-content: center; justify-items: center; gap: .35rem; padding: 2rem; color: var(--termfg); text-align: center; }
 .screen-off .icon { width: 28px; height: 28px; color: var(--muted); }
 .screen-off p { margin: 0; } .screen-off small { color: var(--muted); }
+.pill-task-in_progress { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.pill-task-failed { font-weight: 600; }
+tr.attempts-high td { background: color-mix(in srgb, var(--bad) 8%, transparent); }
+.rs-done { color: var(--ok); } .rs-blocked, .rs-failed { color: var(--bad); }
+.inbox { list-style: none; margin: .5rem 0 0; padding: 0; font-size: 12px; }
+.report { margin-top: .75rem; }

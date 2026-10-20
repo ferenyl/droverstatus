@@ -1,4 +1,4 @@
-export function PaneHeader(p: { crumbs: React.ReactNode[]; badge?: React.ReactNode; actions?: React.ReactNode }) {
+export function PaneHeader(p: { crumbs: React.ReactNode[]; badge?: React.ReactNode; extra?: React.ReactNode; actions?: React.ReactNode }) {
   return (
     <header className="pane-head">
       <nav aria-label="Breadcrumb">
@@ -6,7 +6,7 @@ export function PaneHeader(p: { crumbs: React.ReactNode[]; badge?: React.ReactNo
           {p.crumbs.map((c, i) => <li key={i} aria-current={i === p.crumbs.length - 1 ? 'page' : undefined}>{c}</li>)}
         </ol>
       </nav>
-      {p.badge}
+      {p.badge}{p.extra}
       <div className="actions">{p.actions}</div>
     </header>
   );

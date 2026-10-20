@@ -68,6 +68,7 @@ export function CorralList(p: {
                   <b className="name">{c.slug}</b>
                   <code className="hid">{c.hid}</code>
                   <span data-testid={`badge-${c.hid}`} className={`pill pill-${badge(c)}`}>{badge(c)}</span>
+                  {c.closing && !c.closed && <span data-testid={`closing-${c.hid}`} className="pill pill-blocked">closing…</span>}
                   <span data-testid={`counts-${c.hid}`} className="counts">
                     <i className="c-busy">{n.busy} busy</i> · <i className="c-idle">{n.idle} idle</i> · <i className="c-blocked">{n.blocked} blocked</i>
                   </span>
