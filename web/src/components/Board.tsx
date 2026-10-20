@@ -50,7 +50,7 @@ function Card({ c, t, onOpen }: { c: Corral; t: Task; onOpen: (hid: string, owne
         {attempts >= 3 && <span data-testid={`card-attention-${c.hid}-${t.id}`} className="pill pill-blocked">ask user</span>}
         {t.acceptance.length > 0 && <span className="muted" title="acceptance criteria"><Icon n="tasks" /> {t.acceptance.length}</span>}
       </span>
-      {t.depends_on.length > 0 && <span className="tc-meta">{t.depends_on.map((d) => <code key={d} className="chip-dep">{d}</code>)}</span>}
+      {t.depends_on.length > 0 && <span className="tc-meta"><span className="muted">depends on</span>{t.depends_on.map((d) => <code key={d} className="chip-dep">{d}</code>)}</span>}
     </button>
   );
 }
