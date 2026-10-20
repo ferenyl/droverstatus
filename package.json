@@ -2,7 +2,11 @@
   "name": "droverstatus",
   "private": true,
   "type": "module",
-  "workspaces": ["shared", "server", "web"],
+  "workspaces": [
+    "shared",
+    "server",
+    "web"
+  ],
   "scripts": {
     "dev": "npm run dev -w server & npm run dev -w web; wait",
     "build": "npm run build -w web",
@@ -12,6 +16,7 @@
     "test:e2e": "bash testkit/e2e.sh"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   }
