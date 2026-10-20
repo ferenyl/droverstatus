@@ -3,7 +3,7 @@ import chokidar from 'chokidar';
 import { HID_RE } from '@droverstatus/shared';
 import type { Store } from './store.js';
 
-const noise = /(\.lock|\.tmp|\.[A-Za-z0-9]{6})$/;
+const noise = /(\.lock|\.tmp|\.(json|log|md|kdl)\.[A-Za-z0-9]{6})$/;
 
 export function startWatcher(root: string, store: Store, debounceMs = 150): () => Promise<void> {
   const timers = new Map<string, NodeJS.Timeout>();
@@ -25,6 +25,7 @@ export function startWatcher(root: string, store: Store, debounceMs = 150): () =
     awaitWriteFinish: { stabilityThreshold: 50, pollInterval: 25 },
     ignored: (p) => noise.test(p) || relative(root, p).split(sep)[0] === 'sessions',
   });
+  w.on('error', (e) => console.error('watcher:', e));
   w.on('all', (_ev, p) => queue(p));
   return async () => {
     timers.forEach(clearTimeout);

@@ -13,9 +13,9 @@ export function parseSessions(out: string): Map<string, boolean> {
 
 export function listSessions(zellijBin: string): Promise<Map<string, boolean> | undefined> {
   return new Promise((resolve) => {
-    execFile(zellijBin, ['list-sessions', '-n'], { timeout: 10_000 }, (err, stdout) => {
-      // zellij exits 1 with no sessions; only a timeout/spawn failure is "unknown"
-      if (err && (err.killed || (err as NodeJS.ErrnoException).code === 'ENOENT')) return resolve(undefined);
+    execFile(zellijBin, ['list-sessions', '-n'], { timeout: 10_000 }, (err, stdout, stderr) => {
+      // zellij exits 1 with "No active zellij sessions found."; any other failure is "unknown"
+      if (err && !stdout && !/no active/i.test(stderr)) return resolve(undefined);
       resolve(parseSessions(stdout));
     });
   });
