@@ -1,5 +1,4 @@
 import { EventEmitter } from 'node:events';
-import { existsSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { HID_RE } from '@droverstatus/shared';
@@ -45,13 +44,31 @@ async function names(dir: string, ext: string): Promise<string[]> {
 }
 
 /** Builds a corral from files; null if registry.json is missing/unreadable. Tolerates missing or half-written files. */
+interface RawAgent {
+  model?: string;
+  tab_name?: string;
+  tab_id?: number;
+  pane_id?: string;
+  purpose?: string;
+  cwd?: string;
+}
+
+interface RawRegistry {
+  session?: string;
+  project?: string;
+  slug?: string;
+  closed?: boolean;
+  agents?: Record<string, RawAgent | undefined>;
+  drover?: { mode?: string; model?: string; session_id?: string; tab_id?: number };
+}
+
 export async function buildCorral(root: string, hid: string, liveness: Liveness): Promise<Corral | null> {
   const dir = join(root, hid);
-  const reg = await json<any>(join(dir, 'registry.json'));
+  const reg = await json<RawRegistry>(join(dir, 'registry.json'));
   if (!reg || typeof reg !== 'object') return null;
   const status = async (id: string) => toStatus(await json<AgentStatus>(join(dir, 'status', `${id}.json`)));
   const agents: Agent[] = await Promise.all(
-    Object.entries<any>(reg.agents ?? {}).map(async ([id, a]) => ({
+    Object.entries(reg.agents ?? {}).map(async ([id, a]) => ({
       id,
       model: a?.model,
       tab_name: a?.tab_name,
@@ -118,7 +135,17 @@ export class Store extends EventEmitter {
     for (const h of this.corrals.keys()) if (!hids.includes(h)) this.remove(h);
   }
 
-  async refresh(hid: string, emit = true): Promise<void> {
+  private pending = new Map<string, Promise<void>>();
+
+  /** serialized per hid so a slow older build can't overwrite a newer one */
+  refresh(hid: string, emit = true): Promise<void> {
+    const run = (this.pending.get(hid) ?? Promise.resolve()).then(() => this.doRefresh(hid, emit));
+    this.pending.set(hid, run);
+    void run.finally(() => this.pending.get(hid) === run && this.pending.delete(hid));
+    return run;
+  }
+
+  private async doRefresh(hid: string, emit: boolean): Promise<void> {
     const prev = this.corrals.get(hid);
     const next = await buildCorral(this.root, hid, prev ? prev.liveness : 'unknown');
     if (!next) {
@@ -147,7 +174,4 @@ export class Store extends EventEmitter {
     }
   }
 
-  hasHidDir(hid: string): boolean {
-    return existsSync(join(this.root, hid));
-  }
 }

@@ -1,9 +1,9 @@
 import { existsSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { HID_RE, KEBAB_RE, MODELS } from '@droverstatus/shared';
-import type { ApiError, ServerEvent } from '@droverstatus/shared';
+import type { ApiError, Corral, ServerEvent } from '@droverstatus/shared';
 import type { CliResult, DroverCli } from './droverCli.js';
 import { parseWorktrees } from './droverCli.js';
 import type { Store } from './store.js';
@@ -17,6 +17,8 @@ export interface Deps {
 const fail = (reply: FastifyReply, status: number, body: ApiError) => reply.code(status).send(body);
 const cliFail = (reply: FastifyReply, r: CliResult) =>
   fail(reply, 500, { error: `drover.sh exited ${r.code}`, stderr: r.stderr, code: r.code });
+
+const MAX_TEXT = 100_000;
 
 export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps): void {
   const corralOr404 = (hid: string, reply: FastifyReply) => {
@@ -41,12 +43,18 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
       'cache-control': 'no-cache',
       connection: 'keep-alive',
     });
-    const send = (e: ServerEvent) => res.write(`event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`);
+    res.flushHeaders();
+    const send = (e: ServerEvent) => {
+      try {
+        res.write(`event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`);
+      } catch {}
+    };
     send({ type: 'snapshot', corrals: store.list() });
-    const onUpdated = (hid: string, corral: any) => send({ type: 'corral-updated', hid, corral });
+    const onUpdated = (hid: string, corral: Corral) => send({ type: 'corral-updated', hid, corral });
     const onRemoved = (hid: string) => send({ type: 'corral-removed', hid });
     store.on('updated', onUpdated).on('removed', onRemoved);
     const ping = setInterval(() => res.write(': ping\n\n'), 25_000);
+    res.on('error', () => clearInterval(ping));
     req.raw.on('close', () => {
       clearInterval(ping);
       store.off('updated', onUpdated).off('removed', onRemoved);
@@ -55,9 +63,10 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
 
   app.post<{ Body: { slug?: string; dir?: string; model?: string; brief?: string } }>('/api/corrals', async (req, reply) => {
     const { slug = '', dir = '', model = 'sonnet', brief = '' } = req.body ?? {};
+    if (typeof brief !== 'string' || brief.length > MAX_TEXT) return fail(reply, 400, { error: 'bad brief' });
     if (!KEBAB_RE.test(slug)) return fail(reply, 400, { error: 'slug must be kebab-case' });
     if (!(MODELS as string[]).includes(model)) return fail(reply, 400, { error: 'bad model' });
-    if (!dir || !existsSync(dir) || !statSync(dir).isDirectory()) return fail(reply, 400, { error: 'project dir not found' });
+    if (!isAbsolute(dir) || !existsSync(dir) || !statSync(dir).isDirectory()) return fail(reply, 400, { error: 'project dir must be an existing absolute path' });
     const r = await cli.newDrover(slug, dir, model, brief);
     if (!r.ok) return cliFail(reply, r);
     if (!r.hid) return fail(reply, 500, { error: 'no HID in output', stderr: r.stdout });
@@ -65,7 +74,9 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
   });
 
   app.delete<{ Params: { hid: string }; Querystring: { worktrees?: string } }>('/api/corrals/:hid', async (req, reply) => {
-    if (!corralOr404(req.params.hid, reply)) return;
+    const c = corralOr404(req.params.hid, reply);
+    if (!c) return;
+    if (c.closed) return fail(reply, 409, { error: 'corral already closed' });
     const w = req.query.worktrees;
     if (w !== undefined && w !== 'remove' && w !== 'keep') return fail(reply, 400, { error: 'worktrees must be remove|keep' });
     const r = await cli.close(req.params.hid, w);
@@ -84,7 +95,7 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
   app.post<{ Params: { hid: string }; Body: { message?: string } }>('/api/corrals/:hid/messages', async (req, reply) => {
     if (!corralOr404(req.params.hid, reply)) return;
     const message = req.body?.message?.trim();
-    if (!message) return fail(reply, 400, { error: 'message required' });
+    if (!message || typeof message !== 'string' || message.length > MAX_TEXT) return fail(reply, 400, { error: 'message required' });
     const r = await cli.send(req.params.hid, message);
     return r.ok ? { ok: true } : cliFail(reply, r);
   });

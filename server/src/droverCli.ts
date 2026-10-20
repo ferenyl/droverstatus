@@ -17,9 +17,10 @@ export class DroverCli {
   run(args: string[], timeout = this.timeoutMs): Promise<CliResult> {
     return new Promise((resolve) => {
       execFile(this.bin, args, { timeout, maxBuffer: 4 << 20 }, (err, stdout, stderr) => {
-        const e = err as (NodeJS.ErrnoException & { code?: number | string }) | null;
+        const e = err as (NodeJS.ErrnoException & { code?: number | string; killed?: boolean }) | null;
         const code = !e ? 0 : typeof e.code === 'number' ? e.code : 1;
-        resolve({ ok: !e, code, stdout, stderr: e && typeof e.code === 'string' ? `${e.code}: ${stderr || e.message}` : stderr });
+        const extra = !e || typeof e.code === 'number' ? '' : e.killed ? 'timeout' : `${e.code ?? 'error'}: ${e.message}`;
+        resolve({ ok: !e, code, stdout, stderr: [stderr, extra].filter(Boolean).join('\n') });
       });
     });
   }
@@ -38,7 +39,7 @@ export class DroverCli {
 
   close(hid: string, worktrees?: 'remove' | 'keep') {
     const flag = worktrees === 'remove' ? ['--remove-worktrees'] : worktrees === 'keep' ? ['--keep-worktrees'] : [];
-    return this.run(['close', hid, '--force', ...flag]);
+    return this.run(['close', hid, ...flag]);
   }
 
   kill(hid: string, id: string) {
@@ -50,7 +51,7 @@ export class DroverCli {
   }
 
   revive(hid: string) {
-    return this.run(['revive', hid, '--force'], 120_000);
+    return this.run(['revive', hid], 120_000);
   }
 
   read(hid: string, id: string, lines = 40) {
