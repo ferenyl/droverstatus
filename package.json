@@ -1,0 +1,17 @@
+{
+  "name": "droverstatus",
+  "private": true,
+  "type": "module",
+  "workspaces": ["shared", "server", "web"],
+  "scripts": {
+    "dev": "npm run dev -w server & npm run dev -w web; wait",
+    "build": "npm run build -w web",
+    "start": "npm run build && npm start -w server",
+    "test": "vitest run",
+    "typecheck": "tsc -b server web shared"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
