@@ -39,7 +39,8 @@ export class DroverCli {
 
   close(hid: string, worktrees?: 'remove' | 'keep') {
     const flag = worktrees === 'remove' ? ['--remove-worktrees'] : worktrees === 'keep' ? ['--keep-worktrees'] : [];
-    return this.run(['close', hid, ...flag]);
+    // close waits up to 60s for the session to shut down
+    return this.run(['close', hid, ...flag], 90_000);
   }
 
   kill(hid: string, id: string) {
@@ -59,11 +60,11 @@ export class DroverCli {
   }
 }
 
-/** close exit 4 prints "<path> <branch> <dirty|clean>" lines on stdout */
+/** close exit 4 prints "<path> <branch> <dirty|clean>" lines (branch is empty for a detached HEAD) */
 export function parseWorktrees(out: string): Worktree[] {
   return out
     .split('\n')
-    .map((l) => l.trim().split(/\s+/))
-    .filter((p) => p.length >= 3)
-    .map(([path, branch, st]) => ({ path, branch, dirty: st === 'dirty' }));
+    .map((l) => /^(.+?) (\S*) (dirty|clean)$/.exec(l.trim()))
+    .filter((m): m is RegExpExecArray => !!m)
+    .map(([, path, branch, st]) => ({ path, branch, dirty: st === 'dirty' }));
 }

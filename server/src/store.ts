@@ -20,6 +20,12 @@ async function json<T>(file: string): Promise<T | undefined> {
   }
 }
 
+/** `task set k=v` stores strings; tolerate missing/odd fields */
+function normTask(t: Partial<Task>): Task {
+  const list = (v: unknown) => (Array.isArray(v) ? v.map(String) : []);
+  return { ...t, id: String(t.id ?? ''), title: String(t.title ?? ''), acceptance: list(t.acceptance), depends_on: list(t.depends_on), state: String(t.state ?? 'todo'), attempts: Number(t.attempts) || 0 };
+}
+
 export function parseMessages(log: string): Message[] {
   const out: Message[] = [];
   for (const line of log.split('\n')) {
@@ -51,6 +57,7 @@ interface RawAgent {
   pane_id?: string;
   purpose?: string;
   cwd?: string;
+  worktree?: string | null;
 }
 
 interface RawRegistry {
@@ -58,6 +65,7 @@ interface RawRegistry {
   project?: string;
   slug?: string;
   closed?: boolean;
+  closing_at?: number;
   agents?: Record<string, RawAgent | undefined>;
   drover?: { mode?: string; model?: string; session_id?: string; tab_id?: number };
 }
@@ -76,6 +84,7 @@ export async function buildCorral(root: string, hid: string, liveness: Liveness)
       pane_id: a?.pane_id,
       purpose: a?.purpose,
       cwd: a?.cwd,
+      worktree: a?.worktree,
       status: await status(id),
     })),
   );
@@ -87,6 +96,7 @@ export async function buildCorral(root: string, hid: string, liveness: Liveness)
     project: reg.project ?? '',
     slug: reg.slug ?? '',
     closed: reg.closed === true,
+    closing: reg.closed !== true && reg.closing_at != null,
     liveness,
     drover: {
       mode: reg.drover?.mode,
@@ -96,7 +106,7 @@ export async function buildCorral(root: string, hid: string, liveness: Liveness)
       status: await status('drover'),
     },
     agents,
-    tasks: Array.isArray(tasks) ? tasks : [],
+    tasks: Array.isArray(tasks) ? tasks.filter((t) => t && typeof t === 'object').map(normTask) : [],
     messages: parseMessages(await text(join(dir, 'messages.log'))),
     inbox,
     reports: await names(join(dir, 'reports'), '.md'),

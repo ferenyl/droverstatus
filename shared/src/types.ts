@@ -18,10 +18,14 @@ export interface Agent {
   pane_id?: string;
   purpose?: string;
   cwd?: string;
+  worktree?: string | null;
   status: AgentStatus;
 }
 
 export type Liveness = 'alive' | 'dead' | 'unknown';
+
+/** drover.sh `task set` states; stored as free strings, so unknown values are possible */
+export type TaskState = 'todo' | 'in_progress' | 'done' | 'failed';
 
 export interface Task {
   id: string;
@@ -29,7 +33,7 @@ export interface Task {
   acceptance: string[];
   depends_on: string[];
   owner?: string;
-  state: string;
+  state: TaskState | (string & {});
   attempts?: number;
 }
 
@@ -46,6 +50,8 @@ export interface Corral {
   project: string;
   slug: string;
   closed: boolean;
+  /** close is running (registry closing_at set, not yet closed) */
+  closing?: boolean;
   liveness: Liveness;
   drover: { mode?: string; model?: string; session_id?: string; tab_id?: number; status: AgentStatus };
   agents: Agent[];

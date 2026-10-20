@@ -6,7 +6,7 @@
   "drover_cwd": "/tmp/fake-live",
   "closed": false,
   "drover": {
-    "mode": "live",
+    "mode": "corral",
     "model": "opus",
     "session_id": "sid-drover",
     "tab_id": 1
