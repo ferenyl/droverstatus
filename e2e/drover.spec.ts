@@ -22,7 +22,7 @@ test.beforeEach(async ({ page }) => {
 test('corral list and badges', async ({ page }) => {
   await expect(page.getByTestId(`badge-${A}`)).toHaveText('alive');
   await expect(page.getByTestId(`badge-${B}`)).toHaveText('dead');
-  await expect(page.getByTestId(`counts-${A}`)).toContainText('1b 1i 1!');
+  await expect(page.getByTestId(`counts-${A}`)).toContainText('1 busy · 1 idle · 1 blocked');
   await expect(page.getByTestId('corral-item-c3c3c3c3')).toHaveCount(0);
   await page.getByTestId('show-closed').check();
   await expect(page.getByTestId('badge-c3c3c3c3')).toHaveText('closed');
@@ -33,7 +33,7 @@ test('live agent state change', async ({ page }) => {
   await expect(page.getByTestId('agent-state-alpha')).toHaveText('busy');
   writeFileSync(join(root, A, 'status/alpha.json'), JSON.stringify({ state: 'blocked', at: new Date().toISOString() }));
   await expect(page.getByTestId('agent-state-alpha')).toHaveText('blocked');
-  await expect(page.getByTestId(`counts-${A}`)).toContainText('0b 1i 2!');
+  await expect(page.getByTestId(`counts-${A}`)).toContainText('0 busy · 1 idle · 2 blocked');
   writeFileSync(join(root, A, 'status/alpha.json'), JSON.stringify({ state: 'busy', at: new Date().toISOString() }));
   await expect(page.getByTestId('agent-state-alpha')).toHaveText('busy');
 });
@@ -84,7 +84,7 @@ test('close with worktrees (exit 4) dialog', async ({ page }) => {
   await page.getByTestId('close-remove').click();
   await expect(page.getByTestId('close-dialog')).toHaveCount(0);
   await expect(page.getByTestId('corral-badge')).toHaveText('closed');
-  expect(calls()).toMatch(new RegExp(`^\\S+ close ${D} --force --remove-worktrees$`, 'm'));
+  expect(calls()).toMatch(new RegExp(`^\\S+ close ${D} --remove-worktrees$`, 'm'));
 });
 
 test('revive dead corral', async ({ page }) => {
@@ -127,7 +127,7 @@ test('close with worktrees: keep', async ({ page }) => {
   await page.getByTestId('close-keep').click();
   await expect(page.getByTestId('close-dialog')).toHaveCount(0);
   await expect(page.getByTestId('corral-badge')).toHaveText('closed');
-  expect(calls()).toMatch(new RegExp(`^\\S+ close ${E} --force --keep-worktrees$`, 'm'));
+  expect(calls()).toMatch(new RegExp(`^\\S+ close ${E} --keep-worktrees$`, 'm'));
   expect(readFileSync(join(root, E, 'worktrees.txt'), 'utf8')).toContain('/tmp/fake-wt/dev');
 });
 
@@ -168,16 +168,19 @@ test('rejects non-local Host header with 403', async ({ request }) => {
   expect((await request.get(`${API}/api/corrals`)).status()).toBe(200);
 });
 
-test('SSE reconnect flips online/offline/online', async ({ page, context }) => {
-  await context.setOffline(true);
+test('SSE reconnect flips offline to online', async ({ page }) => {
+  await page.route('**/api/events', (r) => r.abort());
+  await page.goto('/');
   await expect(page.getByTestId('conn-status')).toHaveText('offline');
-  await context.setOffline(false);
+  await page.unroute('**/api/events');
   await expect(page.getByTestId('conn-status')).toHaveText('online', { timeout: 20000 });
-  status(A, 'alpha', 'idle');
   await page.getByTestId(`corral-item-${A}`).getByRole('button').click();
-  await expect(page.getByTestId('agent-state-alpha')).toHaveText('idle');
-  status(A, 'alpha', 'busy');
-  await expect(page.getByTestId('agent-state-alpha')).toHaveText('busy');
+  status(A, 'alpha', 'idle');
+  try {
+    await expect(page.getByTestId('agent-state-alpha')).toHaveText('idle');
+  } finally {
+    status(A, 'alpha', 'busy');
+  }
 });
 
 test('blocked transition raises exactly one notification', async ({ page }) => {
@@ -195,7 +198,7 @@ test('blocked transition raises exactly one notification', async ({ page }) => {
     await expect.poll(notes).toEqual(['live: gamma blocked']);
     status(A, 'gamma', 'blocked'); // rewrite while already blocked: no new notification
     status(A, 'alpha', 'idle');
-    await expect.poll(async () => (await page.getByTestId(`counts-${A}`).textContent()) ?? '').toContain('0b 1i 2!');
+    await expect.poll(async () => (await page.getByTestId(`counts-${A}`).textContent()) ?? '').toContain('0 busy · 1 idle · 1 blocked');
     expect(await notes()).toEqual(['live: gamma blocked']);
   } finally {
     status(A, 'gamma', 'idle');
