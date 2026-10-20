@@ -1,0 +1,25 @@
+{
+  "id": "e5e5e5e5",
+  "session": "corral-keepwt-e5e5e5e5",
+  "project": "/tmp/fake-keepwt",
+  "slug": "keepwt",
+  "drover_cwd": "/tmp/fake-keepwt",
+  "closed": false,
+  "drover": {
+    "mode": "live",
+    "model": "opus",
+    "session_id": "sid-drover",
+    "tab_id": 1
+  },
+  "agents": {
+    "dev": {
+      "purpose": "Fake dev agent",
+      "model": "opus",
+      "tab_id": 2,
+      "tab_name": "dev",
+      "pane_id": "terminal_2",
+      "cwd": "/tmp/fake/dev",
+      "worktree": null
+    }
+  }
+}

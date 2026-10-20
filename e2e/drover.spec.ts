@@ -1,12 +1,20 @@
 import { test, expect } from '@playwright/test';
-import { readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = process.env.DROVER_ROOT!;
-const calls = () => readFileSync(process.env.DROVER_CALLS!, 'utf8');
-const A = 'a1a1a1a1', B = 'b2b2b2b2', D = 'd4d4d4d4';
+const API = process.env.E2E_API!;
+const callsAll = () => (existsSync(process.env.DROVER_CALLS!) ? readFileSync(process.env.DROVER_CALLS!, 'utf8') : '');
+const A = 'a1a1a1a1', B = 'b2b2b2b2', C = 'c3c3c3c3', D = 'd4d4d4d4', E = 'e5e5e5e5';
+
+// Only the fake calls made since this test started; match with anchored regexes (^ and $ per line).
+let mark = 0;
+const calls = () => callsAll().slice(mark);
+const status = (hid: string, id: string, state: string) =>
+  writeFileSync(join(root, hid, `status/${id}.json`), JSON.stringify({ state, at: new Date().toISOString() }));
 
 test.beforeEach(async ({ page }) => {
+  mark = callsAll().length;
   await page.goto('/');
   await expect(page.getByTestId('conn-status')).toHaveText('online');
 });
@@ -36,7 +44,7 @@ test('send message', async ({ page }) => {
   await page.getByTestId('message-send').click();
   await expect(page.getByTestId('message-item').filter({ hasText: 'hello e2e' })).toBeVisible();
   await expect(page.getByTestId('message-input')).toHaveValue('');
-  expect(calls()).toMatch(new RegExp(`send ${A} drover ui hello e2e`));
+  expect(calls()).toMatch(new RegExp(`^\\S+ send ${A} drover ui hello e2e$`, 'm'));
 });
 
 test('agent screen', async ({ page }) => {
@@ -56,7 +64,7 @@ test('new drover', async ({ page }) => {
   await expect(page.getByTestId('new-drover-dialog')).toHaveCount(0);
   await expect(page.getByTestId('corral-view')).toContainText('fresh');
   await expect(page.getByTestId('corral-badge')).toHaveText('alive');
-  expect(calls()).toMatch(/new fresh .* --model haiku --brief/);
+  expect(calls()).toMatch(/^\S+ new fresh \S+ --model haiku --brief \S+$/m);
 });
 
 test('kill agent', async ({ page }) => {
@@ -64,7 +72,7 @@ test('kill agent', async ({ page }) => {
   await page.getByTestId('agent-kill-beta').click();
   await expect(page.getByTestId('agent-row-beta')).toHaveCount(0);
   await expect(page.getByTestId('agent-row-alpha')).toBeVisible();
-  expect(calls()).toMatch(new RegExp(`kill ${A} --force beta`));
+  expect(calls()).toMatch(new RegExp(`^\\S+ kill ${A} --force beta$`, 'm'));
 });
 
 test('close with worktrees (exit 4) dialog', async ({ page }) => {
@@ -76,7 +84,7 @@ test('close with worktrees (exit 4) dialog', async ({ page }) => {
   await page.getByTestId('close-remove').click();
   await expect(page.getByTestId('close-dialog')).toHaveCount(0);
   await expect(page.getByTestId('corral-badge')).toHaveText('closed');
-  expect(calls()).toMatch(new RegExp(`close ${D} --force --remove-worktrees`));
+  expect(calls()).toMatch(new RegExp(`^\\S+ close ${D} --force --remove-worktrees$`, 'm'));
 });
 
 test('revive dead corral', async ({ page }) => {
@@ -108,5 +116,89 @@ test('forced exit 3 on kill shows toast', async ({ page }) => {
     await expect(page.getByTestId('toast')).toContainText('kill boom');
   } finally {
     rmSync(join(root, '.exit'), { force: true });
+  }
+});
+
+test('close with worktrees: keep', async ({ page }) => {
+  await page.getByTestId(`corral-item-${E}`).getByRole('button').click();
+  await page.getByTestId('close-btn').click();
+  await page.getByTestId('close-confirm').click();
+  await expect(page.getByTestId('worktree-item')).toHaveCount(2);
+  await page.getByTestId('close-keep').click();
+  await expect(page.getByTestId('close-dialog')).toHaveCount(0);
+  await expect(page.getByTestId('corral-badge')).toHaveText('closed');
+  expect(calls()).toMatch(new RegExp(`^\\S+ close ${E} --force --keep-worktrees$`, 'm'));
+  expect(readFileSync(join(root, E, 'worktrees.txt'), 'utf8')).toContain('/tmp/fake-wt/dev');
+});
+
+test('reports and tasks view', async ({ page }) => {
+  await page.getByTestId(`corral-item-${A}`).getByRole('button').click();
+  await expect(page.getByTestId('task-row-scaffold')).toContainText('done');
+  await expect(page.getByTestId('task-row-api')).toContainText('running');
+  await expect(page.getByTestId('task-row-api')).toContainText('scaffold');
+  await expect(page.getByTestId('task-row-review')).toContainText('failed');
+  await expect(page.getByTestId('task-row-review')).toContainText('2');
+  await page.getByTestId('report-alpha').click();
+  const md = readFileSync(join(root, A, 'reports/alpha.md'), 'utf8').trim().split('\n')[0];
+  await expect(page.getByTestId('report-body')).toContainText(md.replace(/^#+\s*/, ''));
+  await page.getByTestId('report-alpha').click();
+  await expect(page.getByTestId('report-body')).toHaveCount(0);
+});
+
+test('closed corral offers no actions and rejects them', async ({ page, request }) => {
+  await page.getByTestId('show-closed').check();
+  await page.getByTestId(`corral-item-${C}`).getByRole('button').click();
+  await expect(page.getByTestId('corral-badge')).toHaveText('closed');
+  await expect(page.getByTestId('close-btn')).toHaveCount(0);
+  await expect(page.getByTestId('revive-btn')).toHaveCount(0);
+  expect((await request.delete(`${API}/api/corrals/${C}`)).status()).toBe(409);
+  expect((await request.post(`${API}/api/corrals/${C}/revive`)).status()).toBe(409);
+  expect(calls()).not.toMatch(new RegExp(`(close|revive) ${C}`));
+});
+
+test('rejects non-local Host header with 403', async ({ request }) => {
+  const bad = await request.get(`${API}/api/corrals`, { headers: { host: 'evil.example.com' } });
+  expect(bad.status()).toBe(403);
+  const post = await request.post(`${API}/api/corrals`, {
+    headers: { host: 'evil.example.com' },
+    data: { slug: 'evil', dir: root, model: 'sonnet', brief: '' },
+  });
+  expect(post.status()).toBe(403);
+  expect(calls()).not.toMatch(/ new evil /);
+  expect((await request.get(`${API}/api/corrals`)).status()).toBe(200);
+});
+
+test('SSE reconnect flips online/offline/online', async ({ page, context }) => {
+  await context.setOffline(true);
+  await expect(page.getByTestId('conn-status')).toHaveText('offline');
+  await context.setOffline(false);
+  await expect(page.getByTestId('conn-status')).toHaveText('online', { timeout: 20000 });
+  status(A, 'alpha', 'idle');
+  await page.getByTestId(`corral-item-${A}`).getByRole('button').click();
+  await expect(page.getByTestId('agent-state-alpha')).toHaveText('idle');
+  status(A, 'alpha', 'busy');
+  await expect(page.getByTestId('agent-state-alpha')).toHaveText('busy');
+});
+
+test('blocked transition raises exactly one notification', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __notes: string[] };
+    w.__notes = [];
+    class N { static permission = 'granted'; static requestPermission = async () => 'granted'; constructor(m: string) { w.__notes.push(m); } }
+    (window as unknown as { Notification: unknown }).Notification = N;
+  });
+  await page.goto('/');
+  await expect(page.getByTestId('conn-status')).toHaveText('online');
+  const notes = () => page.evaluate(() => (window as unknown as { __notes: string[] }).__notes);
+  try {
+    status(A, 'gamma', 'blocked');
+    await expect.poll(notes).toEqual(['live: gamma blocked']);
+    status(A, 'gamma', 'blocked'); // rewrite while already blocked: no new notification
+    status(A, 'alpha', 'idle');
+    await expect.poll(async () => (await page.getByTestId(`counts-${A}`).textContent()) ?? '').toContain('0b 1i 2!');
+    expect(await notes()).toEqual(['live: gamma blocked']);
+  } finally {
+    status(A, 'gamma', 'idle');
+    status(A, 'alpha', 'busy');
   }
 });

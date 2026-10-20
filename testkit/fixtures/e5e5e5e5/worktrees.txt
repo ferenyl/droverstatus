@@ -1,0 +1,2 @@
+/tmp/fake-wt/dev drover/e5e5e5e5/dev dirty
+/tmp/fake-wt/qa drover/e5e5e5e5/qa clean
