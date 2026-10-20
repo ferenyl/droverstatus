@@ -26,3 +26,17 @@ export const build = (s?: Sel): string => {
   if (!s.node) return tab === 'overview' ? base : `${base}/${tab}`;
   return s.node.kind === 'drover' ? `${base}/drover/${tab}` : `${base}/agents/${encodeURIComponent(s.node.id)}/${tab}`;
 };
+
+export interface BoardFilter { corrals: string[]; closed: boolean }
+export const isBoard = (path: string) => path === '/board' || path.startsWith('/board/');
+export const parseBoard = (search: string): BoardFilter => {
+  const q = new URLSearchParams(search);
+  return { corrals: (q.get('corrals') ?? '').split(',').filter(Boolean), closed: q.get('closed') === '1' };
+};
+export const buildBoard = (f: BoardFilter): string => {
+  const q = new URLSearchParams();
+  if (f.corrals.length) q.set('corrals', f.corrals.join(','));
+  if (f.closed) q.set('closed', '1');
+  const s = q.toString().replace(/%2C/g, ',');
+  return s ? `/board?${s}` : '/board';
+};

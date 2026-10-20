@@ -10,7 +10,8 @@ import { AgentScreen } from './components/AgentScreen';
 import { CorralView } from './components/CorralView';
 import { CorralList } from './components/CorralList';
 import { NodeDetail } from './components/NodeDetail';
-import { build, parse, tabOf } from './route';
+import { build, parse, tabOf, parseBoard, buildBoard } from './route';
+import { Board } from './components/Board';
 
 const res = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -220,5 +221,37 @@ describe('compat', () => {
     cleanup();
     render(<NodeDetail corral={c} node={{ kind: 'drover' }} tab="messages" onTab={() => {}} onError={() => {}} />);
     expect(screen.getByTestId('msg-queued')).not.toBeNull();
+  });
+});
+
+describe('board', () => {
+  const t = (id: string, state: string, o: Partial<import('@droverstatus/shared').Task> = {}) => ({ id, title: id.toUpperCase(), acceptance: ['x'], depends_on: [], state, ...o });
+  const c1 = corral({ hid: 'aaaaaaaa', slug: 'one', agents: [{ id: 'al', status: { state: 'busy' } }], tasks: [t('t1', 'todo'), t('t2', 'in_progress', { owner: 'al', attempts: 3, depends_on: ['t1'] })] });
+  const c2 = corral({ hid: 'bbbbbbbb', slug: 'two', tasks: [t('t3', 'done')] });
+  const c3 = corral({ hid: 'cccccccc', slug: 'three', closed: true });
+  it('places cards in columns, opens owner, filters', () => {
+    const onOpen = vi.fn(), onFilter = vi.fn();
+    const f = { corrals: [], closed: false };
+    const { rerender } = render(<Board corrals={[c1, c2, c3]} filter={f} onFilter={onFilter} onOpen={onOpen} />);
+    expect(screen.getByTestId('board-col-aaaaaaaa-in_progress').contains(screen.getByTestId('task-card-aaaaaaaa-t2'))).toBe(true);
+    expect(screen.getByTestId('board-col-aaaaaaaa-todo').contains(screen.getByTestId('task-card-aaaaaaaa-t1'))).toBe(true);
+    expect(screen.getByTestId('board-col-bbbbbbbb-failed').textContent).toContain('No tasks');
+    expect(screen.queryByTestId('board-lane-cccccccc')).toBeNull();
+    expect(screen.getByTestId('card-attention-aaaaaaaa-t2')).not.toBeNull();
+    fireEvent.click(screen.getByTestId('task-card-aaaaaaaa-t2'));
+    expect(onOpen).toHaveBeenCalledWith('aaaaaaaa', 'al');
+    fireEvent.click(screen.getByTestId('task-card-aaaaaaaa-t1'));
+    expect(onOpen).toHaveBeenLastCalledWith('aaaaaaaa', undefined);
+    fireEvent.click(screen.getByTestId('board-filter'));
+    fireEvent.click(screen.getByTestId('board-filter-bbbbbbbb'));
+    expect(onFilter).toHaveBeenCalledWith({ corrals: ['bbbbbbbb'], closed: false });
+    rerender(<Board corrals={[c1, c2, c3]} filter={{ corrals: ['bbbbbbbb'], closed: true }} onFilter={onFilter} onOpen={onOpen} />);
+    expect(screen.queryByTestId('board-lane-aaaaaaaa')).toBeNull();
+    expect(screen.getByTestId('board-lane-bbbbbbbb')).not.toBeNull();
+  });
+  it('board url round trip', () => {
+    expect(parseBoard('?corrals=a,b&closed=1')).toEqual({ corrals: ['a', 'b'], closed: true });
+    expect(buildBoard({ corrals: ['a', 'b'], closed: true })).toBe('/board?corrals=a,b&closed=1');
+    expect(buildBoard({ corrals: [], closed: false })).toBe('/board');
   });
 });

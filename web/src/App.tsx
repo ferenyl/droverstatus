@@ -5,7 +5,8 @@ import { CorralView } from './components/CorralView';
 import { NewDroverDialog } from './components/NewDroverDialog';
 import { CloseDialog } from './components/CloseDialog';
 import { NodeDetail } from './components/NodeDetail';
-import { build, parse, tabOf, type Sel, type Tab } from './route';
+import { build, buildBoard, isBoard, parse, parseBoard, tabOf, type BoardFilter, type Sel, type Tab } from './route';
+import { Board } from './components/Board';
 import { Icon } from './components/Icon';
 
 const notify = (msg: string) => {
@@ -20,16 +21,34 @@ export function App() {
       if (a.status.state === 'blocked' && old?.agents.find((o) => o.id === a.id)?.status.state !== 'blocked')
         notify(`${e.corral.slug}: ${a.id} blocked`);
   });
+  const [view, setView] = useState<'console' | 'board'>(() => (isBoard(location.pathname) ? 'board' : 'console'));
+  const [bf, setBf] = useState<BoardFilter>(() => parseBoard(location.search));
   const [sel, setSel] = useState<Sel | undefined>(() => parse(location.pathname));
   const selected = sel?.hid;
   const node = sel?.node;
+  const push = (url: string) => {
+    if (url !== location.pathname + location.search) history.pushState(null, '', url);
+  };
   const go = (next?: Sel) => {
-    const url = build(next);
-    if (url !== location.pathname) history.pushState(null, '', url);
+    push(build(next));
+    setView('console');
     setSel(next);
   };
+  const goBoard = (f: BoardFilter) => {
+    push(buildBoard(f));
+    setView('board');
+    setBf(f);
+  };
   useEffect(() => {
-    const pop = () => setSel(parse(location.pathname));
+    const pop = () => {
+      if (isBoard(location.pathname)) {
+        setView('board');
+        setBf(parseBoard(location.search));
+      } else {
+        setView('console');
+        setSel(parse(location.pathname));
+      }
+    };
     addEventListener('popstate', pop);
     return () => removeEventListener('popstate', pop);
   }, []);
@@ -52,9 +71,18 @@ export function App() {
       <header className="topbar">
         <span className="brand"><Icon n="box" /> Droverstatus</span>
         <span data-testid="conn-status" className={`conn ${connected ? 'up' : 'down'}`}><span className="dot" aria-hidden="true" />{connected ? 'online' : 'offline'}</span>
+        <nav className="views" aria-label="Views">
+          <a href={build(sel)} data-testid="nav-console" aria-current={view === 'console' ? 'page' : undefined} className={view === 'console' ? 'on' : ''} onClick={(e) => { e.preventDefault(); go(sel); }}>Console</a>
+          <a href={buildBoard(bf)} data-testid="nav-board" aria-current={view === 'board' ? 'page' : undefined} className={view === 'board' ? 'on' : ''} onClick={(e) => { e.preventDefault(); goBoard(bf); }}>Board</a>
+        </nav>
         <span className="spacer" />
         <button className="btn btn-sm btn-solid theme-primary" data-testid="new-drover-btn" onClick={() => setNewOpen(true)}><Icon n="plus" /> New drover</button>
       </header>
+      {view === 'board' ? (
+        <main className="pane board-pane">
+          <Board corrals={list} filter={bf} onFilter={goBoard} onOpen={(hid, owner) => go(owner ? { hid, node: { kind: 'agent', id: owner }, tab: 'screen' } : { hid })} />
+        </main>
+      ) : (
       <div className="body">
         <aside className="sidebar">
           <CorralList
@@ -81,6 +109,7 @@ export function App() {
           )}
         </main>
       </div>
+      )}
       {newOpen && <NewDroverDialog onClose={() => setNewOpen(false)} onCreated={(h) => go({ hid: h })} />}
       {toast && <div role="alert" data-testid="toast" className="toast-x">{toast}</div>}
     </div>
