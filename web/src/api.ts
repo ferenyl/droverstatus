@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import type { ApiError, Corral, Model, ServerEvent } from '@droverstatus/shared';
 
 export class ApiFail extends Error {

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import { useEffect, useRef, useState } from 'react';
 import type { Corral, ServerEvent } from '@droverstatus/shared';
 import { openEvents } from './api';

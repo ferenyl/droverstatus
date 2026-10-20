@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import { useEffect, useState } from 'react';
 import type { Corral } from '@droverstatus/shared';
 import { badge, counts, nodeState, type Node } from '../util';

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';

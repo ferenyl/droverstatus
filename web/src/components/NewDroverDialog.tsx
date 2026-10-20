@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import { useState } from 'react';
 import { MODELS, KEBAB_RE } from '@droverstatus/shared';
 import type { Model } from '@droverstatus/shared';

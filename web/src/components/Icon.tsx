@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 const P: Record<string, string> = {
   plus: 'M8 3v10M3 8h10',
   caret: 'm6 4 4 4-4 4',

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import { useState } from 'react';
 import type { Worktree } from '@droverstatus/shared';
 import { api, ApiFail } from '../api';

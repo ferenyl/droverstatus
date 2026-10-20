@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 export function PaneHeader(p: { crumbs: React.ReactNode[]; badge?: React.ReactNode; extra?: React.ReactNode; actions?: React.ReactNode }) {
   return (
     <header className="pane-head">

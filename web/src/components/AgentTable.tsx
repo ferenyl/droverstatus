@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import type { Corral } from '@droverstatus/shared';
 import { relTime } from '../util';
 import { Icon, StateIcon } from './Icon';

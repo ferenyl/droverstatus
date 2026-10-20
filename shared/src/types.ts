@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 export type AgentState = 'busy' | 'idle' | 'blocked' | 'unknown';
 export type Model = 'haiku' | 'sonnet' | 'opus' | 'fable';
 export const MODELS: Model[] = ['haiku', 'sonnet', 'opus', 'fable'];

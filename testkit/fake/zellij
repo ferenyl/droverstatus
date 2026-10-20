@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-only
 # Fake zellij: `list-sessions` prints $DROVER_ROOT/.zellij-sessions (edit live to flip liveness).
 case "${1:-}" in
   list-sessions) cat "${DROVER_ROOT:?}/.zellij-sessions" 2>/dev/null; exit 0 ;;

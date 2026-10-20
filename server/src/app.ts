@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

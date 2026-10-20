@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import { relative, sep } from 'node:path';
 import chokidar from 'chokidar';
 import { HID_RE } from '@droverstatus/shared';

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import { useEffect, useId, useRef } from 'react';
 
 export function Modal(p: { testId: string; title: string; onClose: () => void; children: React.ReactNode }) {

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import type { Node } from './util';
 
 export type Tab = 'overview' | 'tasks' | 'messages' | 'reports' | 'screen';

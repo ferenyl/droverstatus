@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-only
 import { EventEmitter } from 'node:events';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';

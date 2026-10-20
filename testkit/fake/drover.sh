@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-only
 # Fake drover.sh for e2e. Uses $DROVER_ROOT; logs calls to $DROVER_ROOT/.calls.log.
 # Force exit codes: file $DROVER_ROOT/.exit with lines "<cmd>=<code>[:stderr text]" (live-editable),
 # or env FAKE_EXIT_<CMD>=<code>. Defaults: close exits 4 while $hid/worktrees.txt exists and no worktree flag.
