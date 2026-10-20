@@ -1,0 +1,25 @@
+{
+  "id": "b2b2b2b2",
+  "session": "corral-dead-b2b2b2b2",
+  "project": "/tmp/fake-dead",
+  "slug": "dead",
+  "drover_cwd": "/tmp/fake-dead",
+  "closed": false,
+  "drover": {
+    "mode": "live",
+    "model": "opus",
+    "session_id": "sid-drover",
+    "tab_id": 1
+  },
+  "agents": {
+    "alpha": {
+      "purpose": "Fake alpha agent",
+      "model": "sonnet",
+      "tab_id": 2,
+      "tab_name": "alpha",
+      "pane_id": "terminal_2",
+      "cwd": "/tmp/fake/alpha",
+      "worktree": null
+    }
+  }
+}

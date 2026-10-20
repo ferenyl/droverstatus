@@ -1,0 +1,43 @@
+{
+  "id": "a1a1a1a1",
+  "session": "corral-live-a1a1a1a1",
+  "project": "/tmp/fake-live",
+  "slug": "live",
+  "drover_cwd": "/tmp/fake-live",
+  "closed": false,
+  "drover": {
+    "mode": "live",
+    "model": "opus",
+    "session_id": "sid-drover",
+    "tab_id": 1
+  },
+  "agents": {
+    "alpha": {
+      "purpose": "Fake alpha agent",
+      "model": "sonnet",
+      "tab_id": 2,
+      "tab_name": "alpha",
+      "pane_id": "terminal_2",
+      "cwd": "/tmp/fake/alpha",
+      "worktree": null
+    },
+    "beta": {
+      "purpose": "Fake beta agent",
+      "model": "haiku",
+      "tab_id": 2,
+      "tab_name": "beta",
+      "pane_id": "terminal_2",
+      "cwd": "/tmp/fake/beta",
+      "worktree": null
+    },
+    "gamma": {
+      "purpose": "Fake gamma agent",
+      "model": "opus",
+      "tab_id": 2,
+      "tab_name": "gamma",
+      "pane_id": "terminal_2",
+      "cwd": "/tmp/fake/gamma",
+      "worktree": null
+    }
+  }
+}
