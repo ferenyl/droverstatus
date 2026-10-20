@@ -3,7 +3,7 @@
 Local web UI for [drover](https://github.com/Ferenyl) corrals: live view of drovers, agents (busy/idle/blocked), tasks, messages and reports, plus create/close/revive corrals, kill agents, send messages and view agent screens. State is read from `~/.claude/drover/<HID>/`; all mutations go through `drover.sh`.
 
 ## Prerequisites
-Node 20+, npm, `zellij`, and the drover skill's `drover.sh`.
+Node 22+, npm, `zellij`, and the drover skill's `drover.sh`.
 
 ## Install / run
 ```
