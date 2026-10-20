@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { api } from '../api';
 
 export const parseReport = (md: string): [string, string][] | undefined => {
@@ -18,7 +18,7 @@ function ReportBody({ md }: { md: string }) {
   return (
     <div data-testid="report-body" className="card-x report">
       <dl className="kv">
-        {f.map(([k, v]) => <><dt key={`k${k}`}>{k}</dt><dd key={`v${k}`} data-testid={`report-field-${k}`} className={k === 'status' ? `rs rs-${v}` : undefined}>{v}</dd></>)}
+        {f.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd data-testid={`report-field-${k}`} className={k === 'status' ? `rs rs-${v}` : undefined}>{v}</dd></Fragment>)}
       </dl>
     </div>
   );

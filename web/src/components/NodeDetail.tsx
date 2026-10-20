@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+import { Fragment } from 'react';
 import type { Agent, Corral } from '@droverstatus/shared';
 import { api } from '../api';
 import { errMsg, relTime, type Node } from '../util';
@@ -13,7 +14,7 @@ import { Icon, StateIcon } from './Icon';
 
 const Kv = ({ rows }: { rows: [string, React.ReactNode][] }) => (
   <dl className="kv">
-    {rows.map(([k, v]) => <><dt key={`k${k}`}>{k}</dt><dd key={`v${k}`}>{v}</dd></>)}
+    {rows.map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{v}</dd></Fragment>)}
   </dl>
 );
 
