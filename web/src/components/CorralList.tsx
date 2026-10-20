@@ -12,7 +12,7 @@ export function CorralList(p: {
   const list = p.corrals.filter((c) => p.showClosed || !c.closed);
   return (
     <nav data-testid="corral-list">
-      <button className="btn btn-primary w-100 mb-2" data-testid="new-drover-btn" onClick={p.onNew}>Ny drover</button>
+      <button className="btn btn-primary w-100 mb-2" data-testid="new-drover-btn" onClick={p.onNew}>New drover</button>
       <label className="form-check mb-2">
         <input className="form-check-input" type="checkbox" data-testid="show-closed" checked={p.showClosed} onChange={(e) => p.onShowClosed(e.target.checked)} />
         <span className="form-check-label">show closed</span>
