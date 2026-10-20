@@ -52,7 +52,7 @@ esac`,
   });
   it('validates new corral input', async () => {
     const ok = { slug: 'x', dir: tmp, model: 'sonnet', brief: 'b' };
-    for (const bad of [{ slug: 'Bad_Slug' }, { model: 'gpt' }, { dir: 'relative' }, { dir: join(tmp, 'nope') }, { dir: '-x' }]) {
+    for (const bad of [{ slug: 'Bad_Slug' }, { model: 'gpt' }, { dir: 'relative' }, { dir: join(tmp, 'nope') }, { dir: '-x' }, { slug: 5 }, { dir: 5 }, { model: ['sonnet'] }, { brief: {} }]) {
       expect((await req('POST', '/api/corrals', { ...ok, ...bad })).statusCode).toBe(400);
     }
     const r = await req('POST', '/api/corrals', ok);
@@ -140,5 +140,34 @@ describe('watcher', () => {
     await new Promise((r) => setTimeout(r, 1000));
     await stop();
     expect(seen).toEqual(['after']);
+  });
+});
+
+describe('SSE', () => {
+  it('sends snapshot, then corral-updated and corral-removed', async () => {
+    const root = join(tmp, 'sse');
+    corral(root, '11111111', { session: 's', slug: 'a' });
+    const { app, store } = await buildApp({ root, droverSh: join(tmp, 'none.sh'), webDist: join(tmp, 'none') });
+    await app.listen({ host: '127.0.0.1', port: 0 });
+    const port = (app.server.address() as { port: number }).port;
+    const ac = new AbortController();
+    const res = await fetch(`http://127.0.0.1:${port}/api/events`, { signal: ac.signal });
+    expect(res.headers.get('content-type')).toBe('text/event-stream');
+    const reader = res.body!.getReader();
+    let buf = '';
+    const until = async (needle: string) => {
+      while (!buf.includes(needle)) buf += new TextDecoder().decode((await reader.read()).value);
+    };
+    await until('event: snapshot');
+    expect(buf).toContain('"slug":"a"');
+    writeFileSync(join(root, '11111111', 'registry.json'), JSON.stringify({ session: 's', slug: 'b' }));
+    await store.refresh('11111111');
+    await until('event: corral-updated');
+    expect(buf).toContain('"slug":"b"');
+    rmSync(join(root, '11111111'), { recursive: true });
+    await store.refresh('11111111');
+    await until('event: corral-removed');
+    ac.abort();
+    await app.close();
   });
 });

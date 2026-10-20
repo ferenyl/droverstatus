@@ -63,7 +63,8 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
 
   app.post<{ Body: { slug?: string; dir?: string; model?: string; brief?: string } }>('/api/corrals', async (req, reply) => {
     const { slug = '', dir = '', model = 'sonnet', brief = '' } = req.body ?? {};
-    if (typeof brief !== 'string' || brief.length > MAX_TEXT) return fail(reply, 400, { error: 'bad brief' });
+    if ([slug, dir, model, brief].some((v) => typeof v !== 'string')) return fail(reply, 400, { error: 'fields must be strings' });
+    if (brief.length > MAX_TEXT) return fail(reply, 400, { error: 'brief too long' });
     if (!KEBAB_RE.test(slug)) return fail(reply, 400, { error: 'slug must be kebab-case' });
     if (!(MODELS as string[]).includes(model)) return fail(reply, 400, { error: 'bad model' });
     if (!isAbsolute(dir) || !existsSync(dir) || !statSync(dir).isDirectory()) return fail(reply, 400, { error: 'project dir must be an existing absolute path' });
