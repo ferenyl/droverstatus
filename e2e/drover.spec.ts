@@ -29,7 +29,7 @@ test('corral list and badges', async ({ page }) => {
 });
 
 test('live agent state change', async ({ page }) => {
-  await page.getByTestId(`corral-item-${A}`).getByRole('button').click();
+  await page.getByTestId(`corral-item-${A}`).click();
   await expect(page.getByTestId('agent-state-alpha')).toHaveText('busy');
   writeFileSync(join(root, A, 'status/alpha.json'), JSON.stringify({ state: 'blocked', at: new Date().toISOString() }));
   await expect(page.getByTestId('agent-state-alpha')).toHaveText('blocked');
@@ -39,7 +39,7 @@ test('live agent state change', async ({ page }) => {
 });
 
 test('send message', async ({ page }) => {
-  await page.getByTestId(`corral-item-${A}`).getByRole('button').click();
+  await page.getByTestId(`corral-item-${A}`).click();
   await page.getByTestId('message-input').fill('hello e2e');
   await page.getByTestId('message-send').click();
   await expect(page.getByTestId('message-item').filter({ hasText: 'hello e2e' })).toBeVisible();
@@ -48,7 +48,7 @@ test('send message', async ({ page }) => {
 });
 
 test('agent screen', async ({ page }) => {
-  await page.getByTestId(`corral-item-${A}`).getByRole('button').click();
+  await page.getByTestId(`corral-item-${A}`).click();
   await page.getByTestId('agent-screen-alpha').click();
   await expect(page.getByTestId('agent-screen-body')).toContainText('fake screen of a1a1a1a1/alpha');
 });
@@ -68,7 +68,7 @@ test('new drover', async ({ page }) => {
 });
 
 test('kill agent', async ({ page }) => {
-  await page.getByTestId(`corral-item-${A}`).getByRole('button').click();
+  await page.getByTestId(`corral-item-${A}`).click();
   await page.getByTestId('agent-kill-beta').click();
   await expect(page.getByTestId('agent-row-beta')).toHaveCount(0);
   await expect(page.getByTestId('agent-row-alpha')).toBeVisible();
@@ -76,7 +76,7 @@ test('kill agent', async ({ page }) => {
 });
 
 test('close with worktrees (exit 4) dialog', async ({ page }) => {
-  await page.getByTestId(`corral-item-${D}`).getByRole('button').click();
+  await page.getByTestId(`corral-item-${D}`).click();
   await page.getByTestId('close-btn').click();
   await page.getByTestId('close-confirm').click();
   await expect(page.getByTestId('worktree-item')).toHaveCount(2);
@@ -114,8 +114,16 @@ test('tree status icons', async ({ page }) => {
   await expect(alpha).toHaveAttribute('data-state', 'busy');
 });
 
+test('dead drover node detail', async ({ page }) => {
+  await page.getByTestId(`corral-item-${B}`).click();
+  await page.getByTestId(`tree-drover-${B}`).click();
+  await expect(page.getByTestId('drover-detail')).toBeVisible();
+  await expect(page.getByTestId(`status-drover-${B}`)).toHaveAttribute('data-state', 'dead');
+  await expect(page.getByTestId('corral-view')).toHaveCount(0);
+});
+
 test('revive dead corral', async ({ page }) => {
-  await page.getByTestId(`corral-item-${B}`).getByRole('button').click();
+  await page.getByTestId(`corral-item-${B}`).click();
   await expect(page.getByTestId('revive-btn')).toBeVisible();
   await page.getByTestId('revive-btn').click();
   await expect(page.getByTestId('revive-btn')).toHaveCount(0, { timeout: 15000 });
@@ -125,7 +133,7 @@ test('revive dead corral', async ({ page }) => {
 test('forced exit 3 shows toast', async ({ page }) => {
   writeFileSync(join(root, '.exit'), 'close=3:boom forced\n');
   try {
-    await page.getByTestId(`corral-item-${A}`).getByRole('button').click();
+    await page.getByTestId(`corral-item-${A}`).click();
     await page.getByTestId('close-btn').click();
     await page.getByTestId('close-confirm').click();
     await expect(page.getByTestId('close-error')).toContainText('boom forced');
@@ -138,7 +146,7 @@ test('forced exit 3 shows toast', async ({ page }) => {
 test('forced exit 3 on kill shows toast', async ({ page }) => {
   writeFileSync(join(root, '.exit'), 'kill=3:kill boom\n');
   try {
-    await page.getByTestId(`corral-item-${A}`).getByRole('button').click();
+    await page.getByTestId(`corral-item-${A}`).click();
     await page.getByTestId('agent-kill-alpha').click();
     await expect(page.getByTestId('toast')).toContainText('kill boom');
   } finally {
@@ -147,7 +155,7 @@ test('forced exit 3 on kill shows toast', async ({ page }) => {
 });
 
 test('close with worktrees: keep', async ({ page }) => {
-  await page.getByTestId(`corral-item-${E}`).getByRole('button').click();
+  await page.getByTestId(`corral-item-${E}`).click();
   await page.getByTestId('close-btn').click();
   await page.getByTestId('close-confirm').click();
   await expect(page.getByTestId('worktree-item')).toHaveCount(2);
@@ -159,7 +167,7 @@ test('close with worktrees: keep', async ({ page }) => {
 });
 
 test('reports and tasks view', async ({ page }) => {
-  await page.getByTestId(`corral-item-${A}`).getByRole('button').click();
+  await page.getByTestId(`corral-item-${A}`).click();
   await expect(page.getByTestId('task-row-scaffold')).toContainText('done');
   await expect(page.getByTestId('task-row-api')).toContainText('running');
   await expect(page.getByTestId('task-row-api')).toContainText('scaffold');
@@ -174,7 +182,7 @@ test('reports and tasks view', async ({ page }) => {
 
 test('closed corral offers no actions and rejects them', async ({ page, request }) => {
   await page.getByTestId('show-closed').check();
-  await page.getByTestId(`corral-item-${C}`).getByRole('button').click();
+  await page.getByTestId(`corral-item-${C}`).click();
   await expect(page.getByTestId('corral-badge')).toHaveText('closed');
   await expect(page.getByTestId('close-btn')).toHaveCount(0);
   await expect(page.getByTestId('revive-btn')).toHaveCount(0);
@@ -201,7 +209,7 @@ test('SSE reconnect flips offline to online', async ({ page }) => {
   await expect(page.getByTestId('conn-status')).toHaveText('offline');
   await page.unroute('**/api/events');
   await expect(page.getByTestId('conn-status')).toHaveText('online', { timeout: 20000 });
-  await page.getByTestId(`corral-item-${A}`).getByRole('button').click();
+  await page.getByTestId(`corral-item-${A}`).click();
   status(A, 'alpha', 'idle');
   try {
     await expect(page.getByTestId('agent-state-alpha')).toHaveText('idle');
@@ -236,9 +244,9 @@ test('blocked transition raises exactly one notification', async ({ page }) => {
 test('tree expand/collapse and node selection', async ({ page }) => {
   const toggle = page.getByTestId(`tree-toggle-${A}`);
   await expect(page.getByTestId(`tree-drover-${A}`)).toHaveCount(0);
-  await expect(toggle).toHaveAttribute('aria-label', 'Expand');
+  await expect(toggle).toHaveAttribute('aria-label', 'Expand live');
   await toggle.click();
-  await expect(toggle).toHaveAttribute('aria-label', 'Collapse');
+  await expect(toggle).toHaveAttribute('aria-label', 'Collapse live');
   await expect(page.getByTestId(`tree-drover-${A}`)).toBeVisible();
   await expect(page.getByTestId(`tree-agent-${A}-alpha`)).toBeVisible();
   await expect(page.getByTestId('empty')).toBeVisible(); // expanding alone does not select
@@ -252,7 +260,56 @@ test('tree expand/collapse and node selection', async ({ page }) => {
   await toggle.click();
   await expect(page.getByTestId(`tree-agent-${A}-alpha`)).toHaveCount(0);
   // selecting a corral auto-expands it
-  await page.getByTestId(`corral-item-${B}`).getByRole('button').click();
+  await page.getByTestId(`corral-item-${B}`).click();
   await expect(page.getByTestId(`tree-agent-${B}-alpha`)).toBeVisible();
   await expect(page.getByTestId('corral-view')).toBeVisible();
+});
+
+test('toggle exposes aria-expanded', async ({ page }) => {
+  const toggle = page.getByTestId(`tree-toggle-${A}`);
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('selection persists across SSE updates', async ({ page }) => {
+  await page.getByTestId(`corral-item-${A}`).click();
+  await page.getByTestId(`tree-agent-${A}-alpha`).click();
+  await expect(page.getByTestId('agent-detail-state')).toHaveText('busy');
+  try {
+    status(A, 'alpha', 'idle');
+    await expect(page.getByTestId('agent-detail-state')).toHaveText('idle');
+    status(A, 'gamma', 'blocked'); // update to a sibling must not drop selection
+    await expect(page.getByTestId(`status-agent-${A}-gamma`)).toHaveAttribute('data-state', 'blocked');
+    await expect(page.getByTestId('agent-detail')).toBeVisible();
+    await expect(page.getByTestId(`tree-agent-${A}-alpha`)).toHaveAttribute('aria-current', 'true');
+  } finally {
+    status(A, 'alpha', 'busy');
+    status(A, 'gamma', 'idle');
+  }
+});
+
+test('screen polling stops on node change', async ({ page }) => {
+  const reads = () => (calls().match(new RegExp(` read ${A} alpha `, 'g')) ?? []).length;
+  await page.getByTestId(`corral-item-${A}`).click();
+  await page.getByTestId(`tree-agent-${A}-alpha`).click();
+  await expect(page.getByTestId('agent-screen-body')).toContainText('fake screen');
+  await expect.poll(reads).toBeGreaterThanOrEqual(2); // initial + at least one 2s tick
+  await page.getByTestId(`tree-drover-${A}`).click();
+  await expect(page.getByTestId('agent-screen')).toHaveCount(0);
+  const n = reads();
+  await page.waitForTimeout(4500);
+  expect(reads()).toBe(n);
+});
+
+test('kill from agent detail, then agent-gone', async ({ page }) => {
+  await page.getByTestId(`corral-item-${A}`).click();
+  await page.getByTestId(`tree-agent-${A}-gamma`).click();
+  await page.getByTestId('agent-detail').getByTestId('agent-kill-gamma').click();
+  await expect(page.getByTestId('agent-gone')).toContainText('gamma');
+  await expect(page.getByTestId(`tree-agent-${A}-gamma`)).toHaveCount(0);
+  await expect(page.getByTestId('agent-detail')).toHaveCount(0);
+  expect(calls()).toMatch(new RegExp(`^\\S+ kill ${A} --force gamma$`, 'm'));
 });
