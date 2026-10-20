@@ -1,4 +1,5 @@
 import type { Task } from '@droverstatus/shared';
+import { StateIcon } from './Icon';
 
 export function TaskList({ tasks }: { tasks: Task[] }) {
   return (
@@ -10,7 +11,7 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
         <tbody>
           {tasks.map((t) => (
             <tr key={t.id} data-testid={`task-row-${t.id}`}>
-              <td className="mono">{t.id}</td><td>{t.title}</td><td><span className={`pill pill-task-${t.state}`}>{t.state}</span></td><td>{t.owner}</td><td className="mono">{t.attempts ?? 0}</td>
+              <td className="mono">{t.id}</td><td>{t.title}</td><td><span className={`pill pill-task-${t.state}`}><StateIcon state={t.state === 'done' ? 'alive' : t.state === 'running' ? 'busy' : t.state === 'failed' ? 'dead' : 'idle'} />{t.state}</span></td><td>{t.owner}</td><td className="mono">{t.attempts ?? 0}</td>
               <td className="mono">{t.depends_on.join(', ')}</td>
             </tr>
           ))}

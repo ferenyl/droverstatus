@@ -10,6 +10,7 @@ import { AgentScreen } from './components/AgentScreen';
 import { CorralView } from './components/CorralView';
 import { CorralList } from './components/CorralList';
 import { NodeDetail } from './components/NodeDetail';
+import { build, parse, tabOf } from './route';
 
 const res = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -96,12 +97,12 @@ describe('AgentScreen', () => {
 describe('CorralView', () => {
   const noop = () => {};
   it('shows close/revive by state', () => {
-    const { rerender } = render(<CorralView corral={corral({ liveness: 'dead' })} onClose={noop} onError={noop} />);
+    const { rerender } = render(<CorralView corral={corral({ liveness: 'dead' })} tab="overview" onTab={noop} onOpenAgent={noop} onClose={noop} onError={noop} />);
     expect(screen.queryByTestId('revive-btn')).not.toBeNull();
     expect(screen.queryByTestId('close-btn')).not.toBeNull();
-    rerender(<CorralView corral={corral({ liveness: 'alive' })} onClose={noop} onError={noop} />);
+    rerender(<CorralView corral={corral({ liveness: 'alive' })} tab="overview" onTab={noop} onOpenAgent={noop} onClose={noop} onError={noop} />);
     expect(screen.queryByTestId('revive-btn')).toBeNull();
-    rerender(<CorralView corral={corral({ closed: true, liveness: 'dead' })} onClose={noop} onError={noop} />);
+    rerender(<CorralView corral={corral({ closed: true, liveness: 'dead' })} tab="overview" onTab={noop} onOpenAgent={noop} onClose={noop} onError={noop} />);
     expect(screen.queryByTestId('revive-btn')).toBeNull();
     expect(screen.queryByTestId('close-btn')).toBeNull();
   });
@@ -124,9 +125,8 @@ describe('tree', () => {
   it('agent detail shows kill', () => {
     const c = corral({ agents: [{ id: 'a1', model: 'opus', purpose: 'p', status: { state: 'idle' } }] });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(res(200, { screen: 's' })));
-    render(<NodeDetail corral={c} node={{ kind: 'agent', id: 'a1' }} onError={() => {}} />);
+    render(<NodeDetail corral={c} node={{ kind: 'agent', id: 'a1' }} tab="overview" onTab={() => {}} onError={() => {}} />);
     expect(screen.getByTestId('agent-kill-a1')).not.toBeNull();
-    fireEvent.click(screen.getByTestId('tab-overview'));
     expect(screen.getByTestId('agent-detail').textContent).toContain('opus');
   });
 });
@@ -138,7 +138,7 @@ describe('tree details', () => {
     const { rerender } = render(<CorralList corrals={cs} showClosed={false} selected="aaaaaaaa" {...props} />);
     expect(screen.queryByTestId('tree-corral-bbbbbbbb')).toBeNull();
     expect(screen.getByTestId('corral-item-aaaaaaaa').getAttribute('aria-current')).toBe('true');
-    expect(screen.getByTestId('tree-toggle-aaaaaaaa').getAttribute('aria-expanded')).toBe('false');
+    expect(screen.getByTestId('tree-toggle-aaaaaaaa').getAttribute('aria-expanded')).toBe('true');
     rerender(<CorralList corrals={cs} showClosed {...props} />);
     expect(screen.getByTestId('tree-corral-bbbbbbbb')).not.toBeNull();
   });
@@ -148,9 +148,58 @@ describe('tree details', () => {
     expect(nodeState(corral(), 'busy')).toBe('busy');
   });
   it('NodeDetail agent-gone and drover', () => {
-    const { rerender } = render(<NodeDetail corral={corral()} node={{ kind: 'agent', id: 'zz' }} onError={() => {}} />);
+    const { rerender } = render(<NodeDetail corral={corral()} node={{ kind: 'agent', id: 'zz' }} tab="screen" onTab={() => {}} onError={() => {}} />);
     expect(screen.getByTestId('agent-gone')).not.toBeNull();
-    rerender(<NodeDetail corral={corral({ drover: { model: 'opus', status: { state: 'busy' } } })} node={{ kind: 'drover' }} onError={() => {}} />);
+    rerender(<NodeDetail corral={corral({ drover: { model: 'opus', status: { state: 'busy' } } })} node={{ kind: 'drover' }} tab="overview" onTab={() => {}} onError={() => {}} />);
     expect(screen.getByTestId('drover-state').textContent).toBe('busy');
+  });
+});
+
+describe('route', () => {
+  it('parses and builds', () => {
+    expect(parse('/corrals/abc')).toEqual({ hid: 'abc', tab: undefined });
+    expect(parse('/corrals/abc/agents/a1/screen')).toEqual({ hid: 'abc', node: { kind: 'agent', id: 'a1' }, tab: 'screen' });
+    expect(parse('/corrals/abc/drover/tasks')).toEqual({ hid: 'abc', node: { kind: 'drover' }, tab: 'tasks' });
+    expect(parse('/')).toBeUndefined();
+    expect(build({ hid: 'abc' })).toBe('/corrals/abc');
+    expect(build({ hid: 'abc', node: { kind: 'agent', id: 'a1' } })).toBe('/corrals/abc/agents/a1/screen');
+    expect(build({ hid: 'abc', node: { kind: 'drover' } })).toBe('/corrals/abc/drover/overview');
+    expect(tabOf({ hid: 'abc', tab: 'screen' })).toBe('overview');
+  });
+});
+
+describe('node tabs', () => {
+  const c = corral({
+    agents: [{ id: 'a1', status: { state: 'idle' } }],
+    tasks: [{ id: 't1', title: 'T', acceptance: [], depends_on: [], owner: 'a1', state: 'done' }, { id: 't2', title: 'U', acceptance: [], depends_on: [], owner: 'b', state: 'todo' }],
+    messages: [{ at: 'x', from: 'drover', to: 'a1', text: 'hi' }, { at: 'y', from: 'b', to: 'drover', text: 'no' }],
+    reports: ['a1', 'b'],
+  });
+  it('agent shows only its own tasks/messages', () => {
+    const node = { kind: 'agent', id: 'a1' } as const;
+    const { rerender } = render(<NodeDetail corral={c} node={node} tab="tasks" onTab={() => {}} onError={() => {}} />);
+    expect(screen.queryByTestId('task-row-t1')).not.toBeNull();
+    expect(screen.queryByTestId('task-row-t2')).toBeNull();
+    rerender(<NodeDetail corral={c} node={node} tab="messages" onTab={() => {}} onError={() => {}} />);
+    expect(screen.getAllByTestId('message-item')).toHaveLength(1);
+    expect(screen.queryByTestId('message-input')).toBeNull();
+  });
+  it('drover messages tab has composer', () => {
+    render(<NodeDetail corral={c} node={{ kind: 'drover' }} tab="messages" onTab={() => {}} onError={() => {}} />);
+    expect(screen.getAllByTestId('message-item')).toHaveLength(2);
+    expect(screen.queryByTestId('message-input')).not.toBeNull();
+  });
+});
+
+describe('AgentScreen error', () => {
+  it('shows empty state and stops polling', async () => {
+    vi.useFakeTimers();
+    const f = vi.fn().mockImplementation(async () => res(500, { error: 'unknown agent: drover' }));
+    vi.stubGlobal('fetch', f);
+    render(<AgentScreen hid="aaaaaaaa" id="drover" />);
+    await act(async () => {});
+    expect(screen.getByTestId('agent-screen-unavailable').textContent).toContain('unknown agent: drover');
+    await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+    expect(f).toHaveBeenCalledTimes(1);
   });
 });

@@ -106,3 +106,23 @@ dialog::backdrop { background: rgba(0, 0, 0, .55); }
 .caret { align-self: flex-start; height: 28px; }
 .kv dt, .kv dd { display: flex; align-items: center; gap: .4rem; min-height: 26px; }
 .kv dd { flex-wrap: wrap; }
+.pane-in { display: flex; flex-direction: column; min-height: 100%; }
+.pane-in > .tab-body { flex: 1; align-content: start; }
+.tab-body.fill { display: flex; flex-direction: column; min-height: 0; }
+.tab-body.fill .term { flex: 1; display: flex; flex-direction: column; min-height: 240px; }
+.term pre { height: auto; flex: 1; white-space: pre; width: 100%; box-sizing: border-box; }
+.pane { padding-bottom: 0; }
+.pane-in { padding-bottom: 1rem; }
+.st { display: inline-flex; margin-right: .3rem; }
+.st-busy, .st-alive, .st-done { color: var(--ok); } .st-idle, .st-unknown { color: var(--idle); } .st-blocked { color: var(--warn); } .st-dead { color: var(--bad); } .st-closed { color: var(--muted); }
+.st-busy .icon { animation: spin 1.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .st-busy .icon { animation: none; } }
+.ti { display: inline-flex; vertical-align: middle; }
+.ti-overview { color: #5b8def; } .ti-tasks { color: #3fb950; } .ti-messages { color: #a371f7; } .ti-reports { color: #f2a93b; } .ti-screen { color: #39c5cf; }
+.card-x h3 .icon { margin-right: .35rem; color: var(--accent); }
+.msgs .route { color: #a371f7; }
+.feed .composer, .tab-body.fill .composer { position: static; padding-top: 0; }
+.screen-off { flex: 1; display: grid; place-content: center; justify-items: center; gap: .35rem; padding: 2rem; color: var(--termfg); text-align: center; }
+.screen-off .icon { width: 28px; height: 28px; color: var(--muted); }
+.screen-off p { margin: 0; } .screen-off small { color: var(--muted); }

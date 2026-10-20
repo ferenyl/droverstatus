@@ -40,6 +40,7 @@ test('live agent state change', async ({ page }) => {
 
 test('send message', async ({ page }) => {
   await page.getByTestId(`corral-item-${A}`).click();
+  await page.getByTestId(`tree-drover-${A}`).click();
   await page.getByTestId('tab-messages').click();
   await page.getByTestId('message-input').fill('hello e2e');
   await page.getByTestId('message-send').click();

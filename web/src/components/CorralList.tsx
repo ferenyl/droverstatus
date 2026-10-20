@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Corral } from '@droverstatus/shared';
 import { badge, counts, nodeState, type Node } from '../util';
 import { Icon } from './Icon';
@@ -24,6 +24,9 @@ export function CorralList(p: {
 }) {
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [q, setQ] = useState('');
+  useEffect(() => {
+    if (p.selected) setOpen((o) => (o.has(p.selected!) ? o : new Set(o).add(p.selected!)));
+  }, [p.selected]);
   const toggle = (hid: string) =>
     setOpen((o) => {
       const n = new Set(o);

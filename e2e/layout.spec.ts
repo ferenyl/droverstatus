@@ -25,5 +25,18 @@ for (const [w, h] of [[1440, 900], [1024, 768]] as const)
       await page.locator('[data-testid^="tree-agent-"]').first().click();
       await expect(page.getByTestId('agent-screen-body')).not.toBeEmpty();
       await page.screenshot({ path: `${dir}/${w}-${scheme}-agent.png` });
+      expect(page.url()).toMatch(/\/agents\/alpha\/screen$/);
+      const body = (await page.getByTestId('agent-screen').boundingBox())!;
+      const pane = (await page.locator('main.pane').boundingBox())!;
+      expect(body.width).toBeGreaterThan(pane.width - 60);
+      await page.goBack();
+      await expect(page.getByTestId('corral-view')).toBeVisible();
+      await page.goForward();
+      await expect(page.getByTestId('agent-detail')).toBeVisible();
+      await page.reload();
+      await expect(page.getByTestId('agent-screen-body')).not.toBeEmpty();
+      await page.locator('[data-testid^="tree-drover-"]').first().click();
+      await page.getByTestId('tab-screen').click();
+      await page.screenshot({ path: `${dir}/${w}-${scheme}-drover.png` });
     });
   }

@@ -5,7 +5,7 @@ import { CorralView } from './components/CorralView';
 import { NewDroverDialog } from './components/NewDroverDialog';
 import { CloseDialog } from './components/CloseDialog';
 import { NodeDetail } from './components/NodeDetail';
-import type { Node } from './util';
+import { build, parse, tabOf, type Sel, type Tab } from './route';
 import { Icon } from './components/Icon';
 
 const notify = (msg: string) => {
@@ -20,11 +20,22 @@ export function App() {
       if (a.status.state === 'blocked' && old?.agents.find((o) => o.id === a.id)?.status.state !== 'blocked')
         notify(`${e.corral.slug}: ${a.id} blocked`);
   });
-  const [selected, setSelected] = useState<string>();
+  const [sel, setSel] = useState<Sel | undefined>(() => parse(location.pathname));
+  const selected = sel?.hid;
+  const node = sel?.node;
+  const go = (next?: Sel) => {
+    const url = build(next);
+    if (url !== location.pathname) history.pushState(null, '', url);
+    setSel(next);
+  };
+  useEffect(() => {
+    const pop = () => setSel(parse(location.pathname));
+    addEventListener('popstate', pop);
+    return () => removeEventListener('popstate', pop);
+  }, []);
   const [showClosed, setShowClosed] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
   const [closing, setClosing] = useState(false);
-  const [node, setNode] = useState<Node>();
   const [toast, setToast] = useState('');
   useEffect(() => {
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
@@ -52,25 +63,25 @@ export function App() {
             node={node}
             showClosed={showClosed}
             onShowClosed={setShowClosed}
-            onSelect={(h, n) => { setSelected(h); setNode(n); }}
+            onSelect={(h, n) => go({ hid: h, node: n })}
           />
         </aside>
         <main className="pane">
           {current ? (
             <>
               {node ? (
-                <NodeDetail key={`${current.hid}/${node.kind}/${node.kind === 'agent' ? node.id : ''}`} corral={current} node={node} onError={setToast} />
+                <NodeDetail key={`${current.hid}/${node.kind}/${node.kind === 'agent' ? node.id : ''}`} corral={current} node={node} tab={tabOf(sel!)} onTab={(t: Tab) => go({ ...sel!, tab: t })} onError={setToast} />
               ) : (
-                <CorralView key={current.hid} corral={current} onClose={() => setClosing(true)} onError={setToast} />
+                <CorralView key={current.hid} corral={current} tab={tabOf(sel!)} onTab={(t: Tab) => go({ ...sel!, tab: t })} onOpenAgent={(id) => go({ hid: current.hid, node: { kind: 'agent', id }, tab: 'screen' })} onClose={() => setClosing(true)} onError={setToast} />
               )}
               {closing && <CloseDialog hid={current.hid} onClose={() => setClosing(false)} />}
             </>
           ) : (
-            <div data-testid="empty" className="empty-state"><Icon n="box" /><p>Select a corral</p><small>Pick one from the tree, or start a new drover.</small></div>
+            <div data-testid="empty" className="empty-state"><Icon n="box" /><p>{selected ? `Corral ${selected} not found` : 'Select a corral'}</p><small>Pick one from the tree, or start a new drover.</small></div>
           )}
         </main>
       </div>
-      {newOpen && <NewDroverDialog onClose={() => setNewOpen(false)} onCreated={(h) => { setSelected(h); setNode(undefined); }} />}
+      {newOpen && <NewDroverDialog onClose={() => setNewOpen(false)} onCreated={(h) => go({ hid: h })} />}
       {toast && <div role="alert" data-testid="toast" className="toast-x">{toast}</div>}
     </div>
   );
