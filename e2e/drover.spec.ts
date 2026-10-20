@@ -87,6 +87,33 @@ test('close with worktrees (exit 4) dialog', async ({ page }) => {
   expect(calls()).toMatch(new RegExp(`^\\S+ close ${D} --remove-worktrees$`, 'm'));
 });
 
+test('tree status icons', async ({ page }) => {
+  await page.getByTestId('show-closed').check();
+  await expect(page.getByTestId(`status-corral-${A}`)).toHaveAttribute('data-state', 'alive');
+  await expect(page.getByTestId(`status-corral-${B}`)).toHaveAttribute('data-state', 'dead');
+  await expect(page.getByTestId(`status-corral-${C}`)).toHaveAttribute('data-state', 'closed');
+  await page.getByTestId(`tree-toggle-${A}`).click();
+  await page.getByTestId(`tree-toggle-${B}`).click();
+  const gamma = page.getByTestId(`status-agent-${A}-gamma`);
+  const alpha = page.getByTestId(`status-agent-${A}-alpha`);
+  await expect(alpha).toHaveAttribute('data-state', 'busy');
+  await expect(gamma).toHaveAttribute('data-state', 'idle');
+  await expect(page.getByTestId(`status-drover-${A}`)).toHaveAttribute('data-state', 'idle');
+  await expect(page.getByTestId(`status-agent-${B}-alpha`)).toHaveAttribute('data-state', 'dead');
+  await expect(page.getByTestId(`status-drover-${B}`)).toHaveAttribute('data-state', 'dead');
+  try {
+    status(A, 'gamma', 'blocked');
+    await expect(gamma).toHaveAttribute('data-state', 'blocked');
+    status(A, 'alpha', 'idle');
+    await expect(alpha).toHaveAttribute('data-state', 'idle');
+  } finally {
+    status(A, 'gamma', 'idle');
+    status(A, 'alpha', 'busy');
+  }
+  await expect(gamma).toHaveAttribute('data-state', 'idle');
+  await expect(alpha).toHaveAttribute('data-state', 'busy');
+});
+
 test('revive dead corral', async ({ page }) => {
   await page.getByTestId(`corral-item-${B}`).getByRole('button').click();
   await expect(page.getByTestId('revive-btn')).toBeVisible();
@@ -204,4 +231,28 @@ test('blocked transition raises exactly one notification', async ({ page }) => {
     status(A, 'gamma', 'idle');
     status(A, 'alpha', 'busy');
   }
+});
+
+test('tree expand/collapse and node selection', async ({ page }) => {
+  const toggle = page.getByTestId(`tree-toggle-${A}`);
+  await expect(page.getByTestId(`tree-drover-${A}`)).toHaveCount(0);
+  await expect(toggle).toHaveAttribute('aria-label', 'Expand');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-label', 'Collapse');
+  await expect(page.getByTestId(`tree-drover-${A}`)).toBeVisible();
+  await expect(page.getByTestId(`tree-agent-${A}-alpha`)).toBeVisible();
+  await expect(page.getByTestId('empty')).toBeVisible(); // expanding alone does not select
+  await page.getByTestId(`tree-agent-${A}-alpha`).click();
+  await expect(page.getByTestId('agent-detail')).toBeVisible();
+  await expect(page.getByTestId('agent-detail-state')).toHaveText('busy');
+  await expect(page.getByTestId('agent-screen-body')).toContainText(`fake screen of ${A}/alpha`);
+  await page.getByTestId(`tree-drover-${A}`).click();
+  await expect(page.getByTestId('drover-detail')).toBeVisible();
+  await expect(page.getByTestId('drover-state')).toHaveText('idle');
+  await toggle.click();
+  await expect(page.getByTestId(`tree-agent-${A}-alpha`)).toHaveCount(0);
+  // selecting a corral auto-expands it
+  await page.getByTestId(`corral-item-${B}`).getByRole('button').click();
+  await expect(page.getByTestId(`tree-agent-${B}-alpha`)).toBeVisible();
+  await expect(page.getByTestId('corral-view')).toBeVisible();
 });
