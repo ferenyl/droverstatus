@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Corral, ServerEvent } from '@droverstatus/shared';
 import { openEvents } from './api';
 
@@ -13,14 +13,17 @@ export function applyEvent(prev: Map<string, Corral>, e: ServerEvent): Map<strin
 export function useCorrals(onEvent?: (prev: Map<string, Corral>, e: ServerEvent) => void) {
   const [corrals, setCorrals] = useState<Map<string, Corral>>(new Map());
   const [connected, setConnected] = useState(false);
+  const ref = useRef(corrals);
+  const cb = useRef(onEvent);
+  cb.current = onEvent;
   useEffect(
     () =>
       openEvents(
-        (e) =>
-          setCorrals((prev) => {
-            onEvent?.(prev, e);
-            return applyEvent(prev, e);
-          }),
+        (e) => {
+          cb.current?.(ref.current, e);
+          ref.current = applyEvent(ref.current, e);
+          setCorrals(ref.current);
+        },
         setConnected,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps

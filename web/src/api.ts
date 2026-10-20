@@ -37,7 +37,13 @@ export function openEvents(onEvent: (e: ServerEvent) => void, onStatus: (connect
   es.onopen = () => onStatus(true);
   es.onerror = () => onStatus(false);
   for (const t of ['snapshot', 'corral-updated', 'corral-removed'])
-    es.addEventListener(t, (m) => onEvent(JSON.parse((m as MessageEvent).data)));
+    es.addEventListener(t, (m) => {
+      try {
+        onEvent(JSON.parse((m as MessageEvent).data));
+      } catch {
+        /* ignore malformed event */
+      }
+    });
   return () => es.close();
 }
 
