@@ -96,12 +96,12 @@ describe('AgentScreen', () => {
 describe('CorralView', () => {
   const noop = () => {};
   it('shows close/revive by state', () => {
-    const { rerender } = render(<CorralView corral={corral({ liveness: 'dead' })} onScreen={noop} onClose={noop} onError={noop} />);
+    const { rerender } = render(<CorralView corral={corral({ liveness: 'dead' })} onClose={noop} onError={noop} />);
     expect(screen.queryByTestId('revive-btn')).not.toBeNull();
     expect(screen.queryByTestId('close-btn')).not.toBeNull();
-    rerender(<CorralView corral={corral({ liveness: 'alive' })} onScreen={noop} onClose={noop} onError={noop} />);
+    rerender(<CorralView corral={corral({ liveness: 'alive' })} onClose={noop} onError={noop} />);
     expect(screen.queryByTestId('revive-btn')).toBeNull();
-    rerender(<CorralView corral={corral({ closed: true, liveness: 'dead' })} onScreen={noop} onClose={noop} onError={noop} />);
+    rerender(<CorralView corral={corral({ closed: true, liveness: 'dead' })} onClose={noop} onError={noop} />);
     expect(screen.queryByTestId('revive-btn')).toBeNull();
     expect(screen.queryByTestId('close-btn')).toBeNull();
   });
@@ -111,7 +111,7 @@ describe('tree', () => {
   it('expands corral, selects agent', () => {
     const onSelect = vi.fn();
     const c = corral({ agents: [{ id: 'a1', status: { state: 'blocked' } }] });
-    render(<CorralList corrals={[c]} showClosed={false} onShowClosed={() => {}} onSelect={onSelect} onNew={() => {}} />);
+    render(<CorralList corrals={[c]} showClosed={false} onShowClosed={() => {}} onSelect={onSelect} />);
     expect(screen.queryByTestId('tree-agent-aaaaaaaa-a1')).toBeNull();
     fireEvent.click(screen.getByTestId('tree-toggle-aaaaaaaa'));
     expect(screen.getByTestId('tree-drover-aaaaaaaa')).not.toBeNull();
@@ -126,6 +126,7 @@ describe('tree', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(res(200, { screen: 's' })));
     render(<NodeDetail corral={c} node={{ kind: 'agent', id: 'a1' }} onError={() => {}} />);
     expect(screen.getByTestId('agent-kill-a1')).not.toBeNull();
+    fireEvent.click(screen.getByTestId('tab-overview'));
     expect(screen.getByTestId('agent-detail').textContent).toContain('opus');
   });
 });
@@ -133,7 +134,7 @@ describe('tree', () => {
 describe('tree details', () => {
   it('filters closed corrals and sets aria', () => {
     const cs = [corral(), corral({ hid: 'bbbbbbbb', closed: true })];
-    const props = { onShowClosed: () => {}, onSelect: () => {}, onNew: () => {} };
+    const props = { onShowClosed: () => {}, onSelect: () => {} };
     const { rerender } = render(<CorralList corrals={cs} showClosed={false} selected="aaaaaaaa" {...props} />);
     expect(screen.queryByTestId('tree-corral-bbbbbbbb')).toBeNull();
     expect(screen.getByTestId('corral-item-aaaaaaaa').getAttribute('aria-current')).toBe('true');

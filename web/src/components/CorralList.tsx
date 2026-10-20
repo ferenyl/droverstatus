@@ -1,20 +1,17 @@
 import { useState } from 'react';
 import type { Corral } from '@droverstatus/shared';
 import { badge, counts, nodeState, type Node } from '../util';
-
-const GLYPH: Record<string, { ch: string; cls: string }> = {
-  busy: { ch: '◐', cls: 'text-primary' },
-  idle: { ch: '○', cls: 'text-success' },
-  blocked: { ch: '▲', cls: 'text-warning' },
-  dead: { ch: '✕', cls: 'text-danger' },
-  closed: { ch: '■', cls: 'text-secondary' },
-  alive: { ch: '●', cls: 'text-success' },
-  unknown: { ch: '?', cls: 'text-secondary' },
-};
+import { Icon } from './Icon';
 
 export function StatusIcon({ state, id, decorative }: { state: string; id: string; decorative?: boolean }) {
-  const g = GLYPH[state] ?? GLYPH.unknown;
-  return <span data-testid={`status-${id}`} data-state={state} className={`${g.cls} me-1`} {...(decorative ? { 'aria-hidden': true } : { role: 'img', 'aria-label': state, title: state })}>{g.ch}</span>;
+  return (
+    <span
+      data-testid={`status-${id}`}
+      data-state={state}
+      className={`dot dot-${state}`}
+      {...(decorative ? { 'aria-hidden': true } : { role: 'img', 'aria-label': state, title: state })}
+    />
+  );
 }
 
 export function CorralList(p: {
@@ -24,56 +21,72 @@ export function CorralList(p: {
   showClosed: boolean;
   onShowClosed: (v: boolean) => void;
   onSelect: (hid: string, node?: Node) => void;
-  onNew: () => void;
 }) {
   const [open, setOpen] = useState<Set<string>>(new Set());
+  const [q, setQ] = useState('');
   const toggle = (hid: string) =>
     setOpen((o) => {
       const n = new Set(o);
       if (!n.delete(hid)) n.add(hid);
       return n;
     });
-  const list = p.corrals.filter((c) => p.showClosed || !c.closed);
-  const row = (active: boolean) => `btn btn-sm tree-row ${active ? 'active' : ''}`;
+  const needle = q.trim().toLowerCase();
+  const list = p.corrals.filter(
+    (c) =>
+      (p.showClosed || !c.closed) &&
+      (!needle || [c.slug, c.hid, ...c.agents.map((a) => a.id)].some((s) => s.toLowerCase().includes(needle))),
+  );
   return (
-    <nav data-testid="corral-list" aria-label="Corrals">
-      <button className="btn btn-solid theme-primary w-100 mb-2" data-testid="new-drover-btn" onClick={p.onNew}>New drover</button>
-      <label className="d-flex align-items-center gap-2 mb-2">
-        <input className="check" type="checkbox" data-testid="show-closed" checked={p.showClosed} onChange={(e) => p.onShowClosed(e.target.checked)} />
-        show closed
-      </label>
-      <ul className="list-group tree">
+    <nav data-testid="corral-list" aria-label="Corrals" className="sidebar-nav">
+      <div className="side-tools">
+        <label className="search">
+          <Icon n="search" />
+          <input type="search" data-testid="tree-filter" aria-label="Filter corrals" placeholder="Filter…" value={q} onChange={(e) => setQ(e.target.value)} />
+        </label>
+        <label className="toggle">
+          <input className="check" type="checkbox" data-testid="show-closed" checked={p.showClosed} onChange={(e) => p.onShowClosed(e.target.checked)} />
+          show closed
+        </label>
+      </div>
+      {list.length === 0 && <p className="empty-note" data-testid="tree-empty">No corrals{needle ? ' match' : ''}</p>}
+      <ul className="tree">
         {list.map((c) => {
           const n = counts(c);
           const expanded = open.has(c.hid);
-          const sel = c.hid === p.selected;
+          const on = c.hid === p.selected && !p.node;
           return (
-            <li key={c.hid} data-testid={`tree-corral-${c.hid}`} className="list-group-item p-0">
-              <div className="d-flex">
-                <button className="btn btn-sm" data-testid={`tree-toggle-${c.hid}`} aria-label={`${expanded ? 'Collapse' : 'Expand'} ${c.slug}`} aria-expanded={expanded} aria-controls={`tree-children-${c.hid}`} onClick={() => toggle(c.hid)}>{expanded ? '▾' : '▸'}</button>
-                <div className="flex-grow-1 min-w-0">
-                  <button className={row(sel && !p.node)} data-testid={`corral-item-${c.hid}`} aria-current={sel && !p.node ? 'true' : undefined} onClick={() => { p.onSelect(c.hid); setOpen((o) => new Set(o).add(c.hid)); }}>
-                    <StatusIcon state={badge(c)} id={`corral-${c.hid}`} decorative />
-                    <b>{c.slug}</b> <code>{c.hid}</code>{' '}
-                    <span data-testid={`badge-${c.hid}`} className={`badge ${badge(c) === 'alive' ? 'theme-success' : badge(c) === 'dead' ? 'theme-danger' : 'theme-secondary'}`}>{badge(c)}</span>{' '}
-                    <span data-testid={`counts-${c.hid}`} className="small d-block">{n.busy} busy · {n.idle} idle · {n.blocked} blocked</span>
-                  </button>
-                </div>
+            <li key={c.hid} data-testid={`tree-corral-${c.hid}`}>
+              <div className="trow corral">
+                <button className="caret" data-testid={`tree-toggle-${c.hid}`} aria-label={`${expanded ? 'Collapse' : 'Expand'} ${c.slug}`} aria-expanded={expanded} aria-controls={`tree-children-${c.hid}`} onClick={() => toggle(c.hid)}>
+                  <span className={expanded ? 'rot' : ''}><Icon n="caret" /></span>
+                </button>
+                <button className={`label ${on ? 'on' : ''}`} data-testid={`corral-item-${c.hid}`} aria-current={on ? 'true' : undefined} onClick={() => { p.onSelect(c.hid); setOpen((o) => new Set(o).add(c.hid)); }}>
+                  <StatusIcon state={badge(c)} id={`corral-${c.hid}`} decorative />
+                  <b className="name">{c.slug}</b>
+                  <code className="hid">{c.hid}</code>
+                  <span data-testid={`badge-${c.hid}`} className={`pill pill-${badge(c)}`}>{badge(c)}</span>
+                  <span data-testid={`counts-${c.hid}`} className="counts">
+                    <i className="c-busy">{n.busy} busy</i> · <i className="c-idle">{n.idle} idle</i> · <i className="c-blocked">{n.blocked} blocked</i>
+                  </span>
+                </button>
               </div>
               {expanded && (
-                <ul id={`tree-children-${c.hid}`} className="list-unstyled ms-4 mb-0">
+                <ul id={`tree-children-${c.hid}`} className="tree kids">
                   <li>
-                    <button className={row(sel && p.node?.kind === 'drover')} data-testid={`tree-drover-${c.hid}`} aria-current={sel && p.node?.kind === 'drover' ? 'true' : undefined} onClick={() => p.onSelect(c.hid, { kind: 'drover' })}>
+                    <button className={`trow label kid ${c.hid === p.selected && p.node?.kind === 'drover' ? 'on' : ''}`} data-testid={`tree-drover-${c.hid}`} aria-current={c.hid === p.selected && p.node?.kind === 'drover' ? 'true' : undefined} onClick={() => p.onSelect(c.hid, { kind: 'drover' })}>
                       <StatusIcon state={nodeState(c, c.drover.status.state)} id={`drover-${c.hid}`} />drover
                     </button>
                   </li>
-                  {c.agents.map((a) => (
-                    <li key={a.id}>
-                      <button className={row(sel && p.node?.kind === 'agent' && p.node.id === a.id)} data-testid={`tree-agent-${c.hid}-${a.id}`} aria-current={sel && p.node?.kind === 'agent' && p.node.id === a.id ? 'true' : undefined} onClick={() => p.onSelect(c.hid, { kind: 'agent', id: a.id })}>
-                        <StatusIcon state={nodeState(c, a.status.state)} id={`agent-${c.hid}-${a.id}`} />{a.id}
-                      </button>
-                    </li>
-                  ))}
+                  {c.agents.map((a) => {
+                    const sel = c.hid === p.selected && p.node?.kind === 'agent' && p.node.id === a.id;
+                    return (
+                      <li key={a.id}>
+                        <button className={`trow label kid ${sel ? 'on' : ''}`} data-testid={`tree-agent-${c.hid}-${a.id}`} aria-current={sel ? 'true' : undefined} onClick={() => p.onSelect(c.hid, { kind: 'agent', id: a.id })}>
+                          <StatusIcon state={nodeState(c, a.status.state)} id={`agent-${c.hid}-${a.id}`} />{a.id}
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </li>

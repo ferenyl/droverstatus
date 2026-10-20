@@ -40,6 +40,7 @@ test('live agent state change', async ({ page }) => {
 
 test('send message', async ({ page }) => {
   await page.getByTestId(`corral-item-${A}`).click();
+  await page.getByTestId('tab-messages').click();
   await page.getByTestId('message-input').fill('hello e2e');
   await page.getByTestId('message-send').click();
   await expect(page.getByTestId('message-item').filter({ hasText: 'hello e2e' })).toBeVisible();
@@ -168,11 +169,13 @@ test('close with worktrees: keep', async ({ page }) => {
 
 test('reports and tasks view', async ({ page }) => {
   await page.getByTestId(`corral-item-${A}`).click();
+  await page.getByTestId('tab-tasks').click();
   await expect(page.getByTestId('task-row-scaffold')).toContainText('done');
   await expect(page.getByTestId('task-row-api')).toContainText('running');
   await expect(page.getByTestId('task-row-api')).toContainText('scaffold');
   await expect(page.getByTestId('task-row-review')).toContainText('failed');
   await expect(page.getByTestId('task-row-review')).toContainText('2');
+  await page.getByTestId('tab-reports').click();
   await page.getByTestId('report-alpha').click();
   const md = readFileSync(join(root, A, 'reports/alpha.md'), 'utf8').trim().split('\n')[0];
   await expect(page.getByTestId('report-body')).toContainText(md.replace(/^#+\s*/, ''));

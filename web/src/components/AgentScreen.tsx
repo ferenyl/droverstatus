@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { errMsg } from '../util';
+import { Icon } from './Icon';
 
 export function AgentScreen({ hid, id, onClose }: { hid: string; id: string; onClose?: () => void }) {
   const [screen, setScreen] = useState('');
@@ -19,11 +20,13 @@ export function AgentScreen({ hid, id, onClose }: { hid: string; id: string; onC
     };
   }, [hid, id]);
   return (
-    <section data-testid="agent-screen" className="card my-3">
-      <header className="card-header d-flex justify-content-between align-items-center">
-        <code>{id}</code> {onClose && <button className="btn btn-sm btn-outline theme-secondary" data-testid="agent-screen-close" onClick={onClose}>Close</button>}
+    <section data-testid="agent-screen" className="term">
+      <header>
+        <Icon n="term" /> <code>{id}</code>
+        <span className="live">live · 2s</span>
+        {onClose && <button className="btn btn-sm btn-outline theme-secondary" data-testid="agent-screen-close" onClick={onClose}>Close</button>}
       </header>
-      <pre data-testid="agent-screen-body" className="card-body screen m-0 overflow-auto small">{screen}</pre>
+      <pre data-testid="agent-screen-body" tabIndex={0} aria-label={`Screen of ${id}`}>{screen}</pre>
     </section>
   );
 }
