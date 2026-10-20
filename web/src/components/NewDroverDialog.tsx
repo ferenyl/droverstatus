@@ -3,6 +3,7 @@ import { MODELS, KEBAB_RE } from '@droverstatus/shared';
 import type { Model } from '@droverstatus/shared';
 import { api } from '../api';
 import { errMsg } from '../util';
+import { Modal } from './Modal';
 
 export function NewDroverDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (hid: string) => void }) {
   const [slug, setSlug] = useState('');
@@ -26,7 +27,7 @@ export function NewDroverDialog({ onClose, onCreated }: { onClose: () => void; o
     }
   };
   return (
-    <dialog open data-testid="new-drover-dialog" className="card p-3 shadow">
+    <Modal testId="new-drover-dialog" title="New drover" onClose={onClose}>
       <form onSubmit={submit} className="vstack gap-2">
         <label>slug <input className="form-control" data-testid="new-slug" value={slug} onChange={(e) => setSlug(e.target.value)} /></label>
         <label>project directory <input className="form-control" data-testid="new-dir" value={dir} onChange={(e) => setDir(e.target.value)} /></label>
@@ -41,6 +42,6 @@ export function NewDroverDialog({ onClose, onCreated }: { onClose: () => void; o
         <button className="btn btn-primary" data-testid="new-submit" type="submit" disabled={!valid || busy}>Create</button>
         <button className="btn btn-outline-secondary" data-testid="new-cancel" type="button" onClick={onClose}>Cancel</button>
       </form>
-    </dialog>
+    </Modal>
   );
 }

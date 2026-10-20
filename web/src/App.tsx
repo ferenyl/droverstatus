@@ -52,7 +52,7 @@ export function App() {
         onNew={() => setNewOpen(true)}
       />
       </div>
-      <div className="col-md-8 col-xl-9">
+      <main className="col-md-8 col-xl-9">
       {current ? (
         <>
           {node ? (
@@ -66,7 +66,7 @@ export function App() {
       ) : (
         <p data-testid="empty" className="text-body-secondary">Select a corral</p>
       )}
-      </div>
+      </main>
       </div>
       {newOpen && <NewDroverDialog onClose={() => setNewOpen(false)} onCreated={(h) => { setSelected(h); setNode(undefined); }} />}
       {toast && <div role="alert" data-testid="toast" className="alert alert-danger position-fixed bottom-0 end-0 m-3 shadow">{toast}</div>}

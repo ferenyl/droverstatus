@@ -16,7 +16,7 @@ export function CorralView(p: {
   const attach = `zellij attach ${c.session}`;
   const act = (f: () => Promise<unknown>) => f().catch((e) => p.onError(errMsg(e)));
   return (
-    <main data-testid="corral-view">
+    <div data-testid="corral-view">
       <header className="mb-3">
         <h2 className="h4">{c.slug} <code>{c.hid}</code> <span data-testid="corral-badge" className="badge text-bg-secondary">{badge(c)}</span></h2>
         <div>project: <span data-testid="corral-project">{c.project}</span></div>
@@ -34,6 +34,6 @@ export function CorralView(p: {
       <TaskList tasks={c.tasks} />
       <MessageFeed corral={c} onError={p.onError} />
       <Reports hid={c.hid} ids={c.reports} />
-    </main>
+    </div>
   );
 }

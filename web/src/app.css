@@ -1,3 +1,3 @@
-dialog[open] { position: fixed; top: 20vh; left: 50%; transform: translateX(-50%); z-index: 1050; width: min(32rem, 92vw); }
+dialog[open] { width: min(32rem, 92vw); }
 dialog::backdrop { background: rgba(0, 0, 0, .4); }
 tr.state-blocked { --bs-table-bg: var(--bs-warning-bg-subtle); }

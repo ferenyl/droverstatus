@@ -16,7 +16,7 @@ export function NodeDetail({ corral: c, node, onError }: { corral: Corral; node:
   if (node.kind === 'drover') {
     const d = c.drover;
     return (
-      <main data-testid="drover-detail">
+      <div data-testid="drover-detail">
         <h2 className="h4">drover <code>{c.hid}</code></h2>
         <Dl rows={[
           ['state', <span data-testid="drover-state">{d.status.state}</span>],
@@ -25,13 +25,13 @@ export function NodeDetail({ corral: c, node, onError }: { corral: Corral; node:
           ['updated', relTime(d.status.at)],
           ['session', d.session_id ?? ''],
         ]} />
-      </main>
+      </div>
     );
   }
   const a: Agent | undefined = c.agents.find((x) => x.id === node.id);
   if (!a) return <p data-testid="agent-gone" className="text-body-secondary">Agent {node.id} no longer exists</p>;
   return (
-    <main data-testid="agent-detail">
+    <div data-testid="agent-detail">
       <h2 className="h4 d-flex justify-content-between">
         <span>{a.id} <span data-testid="agent-detail-state" className="badge text-bg-secondary">{a.status.state}</span></span>
         <button className="btn btn-sm btn-outline-danger" data-testid={`agent-kill-${a.id}`} onClick={() => api.kill(c.hid, a.id).catch((e) => onError(errMsg(e)))}>Kill</button>
@@ -43,8 +43,8 @@ export function NodeDetail({ corral: c, node, onError }: { corral: Corral; node:
         ['updated', relTime(a.status.at)],
         ['cwd', a.cwd ?? ''],
       ]} />
-      <AgentScreen hid={c.hid} id={a.id} onClose={() => {}} />
+      <AgentScreen hid={c.hid} id={a.id} />
       <Reports hid={c.hid} ids={c.reports.filter((r) => r === a.id)} />
-    </main>
+    </div>
   );
 }

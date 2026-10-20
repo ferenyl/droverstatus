@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Worktree } from '@droverstatus/shared';
 import { api, ApiFail } from '../api';
 import { errMsg } from '../util';
+import { Modal } from './Modal';
 
 export function CloseDialog({ hid, onClose }: { hid: string; onClose: () => void }) {
   const [worktrees, setWorktrees] = useState<Worktree[]>();
@@ -17,7 +18,7 @@ export function CloseDialog({ hid, onClose }: { hid: string; onClose: () => void
     }
   };
   return (
-    <dialog open data-testid="close-dialog" className="card p-3 shadow">
+    <Modal testId="close-dialog" title={worktrees ? 'Close drover: worktrees' : 'Close drover'} onClose={onClose}>
       {worktrees ? (
         <>
           <p>Worktrees exist:</p>
@@ -39,6 +40,6 @@ export function CloseDialog({ hid, onClose }: { hid: string; onClose: () => void
       )}
       {error && <p role="alert" data-testid="close-error" className="alert alert-danger mt-2">{error}</p>}
       <button className="btn btn-outline-secondary" data-testid="close-cancel" onClick={onClose}>Cancel</button>
-    </dialog>
+    </Modal>
   );
 }

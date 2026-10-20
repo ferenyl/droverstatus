@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { errMsg } from '../util';
 
-export function AgentScreen({ hid, id, onClose }: { hid: string; id: string; onClose: () => void }) {
+export function AgentScreen({ hid, id, onClose }: { hid: string; id: string; onClose?: () => void }) {
   const [screen, setScreen] = useState('');
   useEffect(() => {
     let live = true;
@@ -21,7 +21,7 @@ export function AgentScreen({ hid, id, onClose }: { hid: string; id: string; onC
   return (
     <section data-testid="agent-screen" className="card my-3">
       <header className="card-header d-flex justify-content-between align-items-center">
-        <code>{id}</code> <button className="btn btn-sm btn-outline-secondary" data-testid="agent-screen-close" onClick={onClose}>Close</button>
+        <code>{id}</code> {onClose && <button className="btn btn-sm btn-outline-secondary" data-testid="agent-screen-close" onClick={onClose}>Close</button>}
       </header>
       <pre data-testid="agent-screen-body" className="card-body bg-dark text-light m-0 overflow-auto small">{screen}</pre>
     </section>

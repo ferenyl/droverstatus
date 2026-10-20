@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Corral } from '@droverstatus/shared';
 import { api, ApiFail } from './api';
-import { relTime, errMsg } from './util';
+import { relTime, errMsg, nodeState } from './util';
 import { CloseDialog } from './components/CloseDialog';
 import { NewDroverDialog } from './components/NewDroverDialog';
 import { AgentScreen } from './components/AgentScreen';
@@ -118,7 +118,7 @@ describe('tree', () => {
     expect(screen.getByTestId('status-agent-aaaaaaaa-a1').dataset.state).toBe('blocked');
     fireEvent.click(screen.getByTestId('tree-agent-aaaaaaaa-a1'));
     expect(onSelect).toHaveBeenCalledWith('aaaaaaaa', { kind: 'agent', id: 'a1' });
-    fireEvent.click(screen.getByTestId('corral-item-aaaaaaaa').querySelector('button')!);
+    fireEvent.click(screen.getByTestId('corral-item-aaaaaaaa'));
     expect(onSelect).toHaveBeenLastCalledWith('aaaaaaaa');
   });
   it('agent detail shows kill', () => {
@@ -127,5 +127,29 @@ describe('tree', () => {
     render(<NodeDetail corral={c} node={{ kind: 'agent', id: 'a1' }} onError={() => {}} />);
     expect(screen.getByTestId('agent-kill-a1')).not.toBeNull();
     expect(screen.getByTestId('agent-detail').textContent).toContain('opus');
+  });
+});
+
+describe('tree details', () => {
+  it('filters closed corrals and sets aria', () => {
+    const cs = [corral(), corral({ hid: 'bbbbbbbb', closed: true })];
+    const props = { onShowClosed: () => {}, onSelect: () => {}, onNew: () => {} };
+    const { rerender } = render(<CorralList corrals={cs} showClosed={false} selected="aaaaaaaa" {...props} />);
+    expect(screen.queryByTestId('tree-corral-bbbbbbbb')).toBeNull();
+    expect(screen.getByTestId('corral-item-aaaaaaaa').getAttribute('aria-current')).toBe('true');
+    expect(screen.getByTestId('tree-toggle-aaaaaaaa').getAttribute('aria-expanded')).toBe('false');
+    rerender(<CorralList corrals={cs} showClosed {...props} />);
+    expect(screen.getByTestId('tree-corral-bbbbbbbb')).not.toBeNull();
+  });
+  it('nodeState maps closed/dead over agent state', () => {
+    expect(nodeState(corral({ closed: true }), 'busy')).toBe('closed');
+    expect(nodeState(corral({ liveness: 'dead' }), 'busy')).toBe('dead');
+    expect(nodeState(corral(), 'busy')).toBe('busy');
+  });
+  it('NodeDetail agent-gone and drover', () => {
+    const { rerender } = render(<NodeDetail corral={corral()} node={{ kind: 'agent', id: 'zz' }} onError={() => {}} />);
+    expect(screen.getByTestId('agent-gone')).not.toBeNull();
+    rerender(<NodeDetail corral={corral({ drover: { model: 'opus', status: { state: 'busy' } } })} node={{ kind: 'drover' }} onError={() => {}} />);
+    expect(screen.getByTestId('drover-state').textContent).toBe('busy');
   });
 });

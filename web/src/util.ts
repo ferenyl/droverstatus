@@ -23,4 +23,6 @@ export const errMsg = (e: unknown) => {
   return b ? `${b.error}${b.stderr ? `: ${b.stderr}` : ''}` : String(e);
 };
 
+export const nodeState = (c: Corral, state: string) => (c.closed ? 'closed' : c.liveness === 'dead' ? 'dead' : state);
+
 export type Node = { kind: 'drover' } | { kind: 'agent'; id: string };
