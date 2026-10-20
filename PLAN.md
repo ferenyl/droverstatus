@@ -21,7 +21,7 @@ Sökväg till skriptet konfigureras (`DROVER_SH`, default ovan + `/scripts/drove
 | Ny drover | skriv brief till temp-fil → `drover.sh new <slug> <dir> --model M --brief F`; parsa `HID=` |
 | Stäng drover | `drover.sh close <HID>`; exit 4 → visa worktree-lista (dirty-markerade), välj `--remove-worktrees`/`--keep-worktrees` |
 | Döda agent | `drover.sh kill <HID> --force <id>` |
-| Meddelande | `drover.sh send <HID> drover ui "<msg>"` |
+| Meddelande | `drover.sh send <HID> drover droverstatusui "<msg>"` |
 | Revive | `drover.sh revive <HID>` (visas när session död och `closed != true`) |
 | Agentskärm | `drover.sh read <HID> <id> [lines]` pollat ~2s, bara när panelen är öppen |
 

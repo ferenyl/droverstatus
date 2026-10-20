@@ -46,7 +46,7 @@ test('send message', async ({ page }) => {
   await page.getByTestId('message-send').click();
   await expect(page.getByTestId('message-item').filter({ hasText: 'hello e2e' })).toBeVisible();
   await expect(page.getByTestId('message-input')).toHaveValue('');
-  expect(calls()).toMatch(new RegExp(`^\\S+ send ${A} drover ui hello e2e$`, 'm'));
+  expect(calls()).toMatch(new RegExp(`^\\S+ send ${A} drover droverstatusui hello e2e$`, 'm'));
 });
 
 test('agent screen', async ({ page }) => {

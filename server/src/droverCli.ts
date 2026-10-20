@@ -47,7 +47,7 @@ export class DroverCli {
   }
 
   send(hid: string, msg: string) {
-    return this.run(['send', hid, 'drover', 'ui', msg]);
+    return this.run(['send', hid, 'drover', 'droverstatusui', msg]);
   }
 
   revive(hid: string) {

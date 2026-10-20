@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, readFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -103,6 +103,7 @@ describe('DroverCli', () => {
     expect((await new DroverCli(join(tmp, 'missing')).run([])).stderr).toContain('ENOENT');
     const r = await cli.send('aaaaaaaa', '-x $(y) "q"');
     expect(r.ok).toBe(true);
+    expect(readFileSync(`${sh}.log`, 'utf8')).toContain('send aaaaaaaa drover droverstatusui -x $(y) "q"');
   });
 });
 
