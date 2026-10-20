@@ -82,6 +82,9 @@ esac`,
     const r = await req('GET', '/api/corrals/aaaaaaaa/agents/dev/screen?lines=99999');
     expect(r.json()).toEqual({ screen: 'screen\n' });
   });
+  it('screen works for the drover id', async () => {
+    expect((await req('GET', '/api/corrals/aaaaaaaa/agents/drover/screen')).statusCode).toBe(200);
+  });
   it('reports: ok, traversal rejected', async () => {
     expect((await req('GET', '/api/corrals/aaaaaaaa/reports/dev')).body).toBe('# r');
     expect((await req('GET', '/api/corrals/aaaaaaaa/reports/..%2F..%2Fregistry')).statusCode).toBe(400);
@@ -169,5 +172,19 @@ describe('SSE', () => {
     await until('event: corral-removed');
     ac.abort();
     await app.close();
+  });
+});
+
+describe('SPA fallback', () => {
+  it('serves index.html for non-api GETs, 404 JSON for api and non-GET', async () => {
+    const dist = join(tmp, 'dist');
+    mkdirSync(dist, { recursive: true });
+    writeFileSync(join(dist, 'index.html'), '<h1>spa</h1>');
+    const { app } = await buildApp({ root: join(tmp, 'spa-root'), droverSh: join(tmp, 'none.sh'), webDist: dist });
+    const get = (url: string, method: 'GET' | 'POST' = 'GET') => app.inject({ method, url, headers: { host: 'localhost' } });
+    expect((await get('/')).body).toBe('<h1>spa</h1>');
+    expect((await get('/corral/aaaaaaaa')).body).toBe('<h1>spa</h1>');
+    expect((await get('/api/nope')).statusCode).toBe(404);
+    expect((await get('/x', 'POST')).statusCode).toBe(404);
   });
 });

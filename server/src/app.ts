@@ -28,6 +28,11 @@ export async function buildApp({ root, droverSh, webDist }: AppOpts) {
   });
   registerRoutes(app, { store, cli: new DroverCli(droverSh), root });
   const dist = webDist ?? resolve(dirname(fileURLToPath(import.meta.url)), '../../web/dist');
-  if (existsSync(dist)) await app.register(fastifyStatic, { root: dist });
+  if (existsSync(dist)) {
+    await app.register(fastifyStatic, { root: dist });
+    app.setNotFoundHandler((req, reply) =>
+      req.method === 'GET' && !req.url.startsWith('/api/') ? reply.sendFile('index.html') : reply.code(404).send({ error: 'not found' }),
+    );
+  }
   return { app, store };
 }
