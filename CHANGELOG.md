@@ -1,0 +1,9 @@
+# Changelog
+
+All notable changes are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/).
+
+## [0.1.0] - Unreleased
+### Added
+- Live view of drover corrals, agents (busy/idle/blocked), tasks, messages and reports via SSE.
+- Create, close (with worktree prompt) and revive corrals; kill agents; send messages; view agent screens.
+- Test kit: synthetic fixtures, fake `drover.sh`/`zellij`, `npm run test:e2e`.
