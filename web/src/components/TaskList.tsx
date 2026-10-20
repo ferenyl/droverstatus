@@ -2,9 +2,9 @@ import type { Task } from '@droverstatus/shared';
 
 export function TaskList({ tasks }: { tasks: Task[] }) {
   return (
-    <table data-testid="task-list">
+    <div className="table-responsive"><table data-testid="task-list" className="table table-sm">
       <thead>
-        <tr><th>id</th><th>titel</th><th>state</th><th>owner</th><th>försök</th><th>beror på</th></tr>
+        <tr><th>id</th><th>title</th><th>state</th><th>owner</th><th>attempts</th><th>depends on</th></tr>
       </thead>
       <tbody>
         {tasks.map((t) => (
@@ -14,6 +14,6 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
           </tr>
         ))}
       </tbody>
-    </table>
+    </table></div>
   );
 }

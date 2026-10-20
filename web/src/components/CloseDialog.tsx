@@ -17,28 +17,28 @@ export function CloseDialog({ hid, onClose }: { hid: string; onClose: () => void
     }
   };
   return (
-    <dialog open data-testid="close-dialog">
+    <dialog open data-testid="close-dialog" className="card p-3 shadow">
       {worktrees ? (
         <>
-          <p>Worktrees finns:</p>
-          <ul data-testid="worktree-list">
+          <p>Worktrees exist:</p>
+          <ul data-testid="worktree-list" className="list-group mb-3">
             {worktrees.map((w) => (
-              <li key={w.path} data-testid="worktree-item">
-                {w.path} ({w.branch}) {w.dirty && <b data-testid="worktree-dirty">dirty</b>}
+              <li key={w.path} data-testid="worktree-item" className="list-group-item">
+                {w.path} ({w.branch}) {w.dirty && <b data-testid="worktree-dirty" className="badge text-bg-warning">dirty</b>}
               </li>
             ))}
           </ul>
-          <button data-testid="close-remove" onClick={() => run('remove')}>Ta bort worktrees</button>
-          <button data-testid="close-keep" onClick={() => run('keep')}>Behåll worktrees</button>
+          <button className="btn btn-danger me-2" data-testid="close-remove" onClick={() => run('remove')}>Remove worktrees</button>
+          <button className="btn btn-primary me-2" data-testid="close-keep" onClick={() => run('keep')}>Keep worktrees</button>
         </>
       ) : (
         <>
-          <p>Stäng drover {hid}?</p>
-          <button data-testid="close-confirm" onClick={() => run()}>Stäng</button>
+          <p>Close drover {hid}?</p>
+          <button className="btn btn-danger me-2" data-testid="close-confirm" onClick={() => run()}>Close</button>
         </>
       )}
-      {error && <p role="alert" data-testid="close-error">{error}</p>}
-      <button data-testid="close-cancel" onClick={onClose}>Avbryt</button>
+      {error && <p role="alert" data-testid="close-error" className="alert alert-danger mt-2">{error}</p>}
+      <button className="btn btn-outline-secondary" data-testid="close-cancel" onClick={onClose}>Cancel</button>
     </dialog>
   );
 }
