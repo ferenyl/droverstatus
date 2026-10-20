@@ -8,6 +8,8 @@ import { CloseDialog } from './components/CloseDialog';
 import { NewDroverDialog } from './components/NewDroverDialog';
 import { AgentScreen } from './components/AgentScreen';
 import { CorralView } from './components/CorralView';
+import { CorralList } from './components/CorralList';
+import { NodeDetail } from './components/NodeDetail';
 
 const res = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -102,5 +104,28 @@ describe('CorralView', () => {
     rerender(<CorralView corral={corral({ closed: true, liveness: 'dead' })} onScreen={noop} onClose={noop} onError={noop} />);
     expect(screen.queryByTestId('revive-btn')).toBeNull();
     expect(screen.queryByTestId('close-btn')).toBeNull();
+  });
+});
+
+describe('tree', () => {
+  it('expands corral, selects agent', () => {
+    const onSelect = vi.fn();
+    const c = corral({ agents: [{ id: 'a1', status: { state: 'blocked' } }] });
+    render(<CorralList corrals={[c]} showClosed={false} onShowClosed={() => {}} onSelect={onSelect} onNew={() => {}} />);
+    expect(screen.queryByTestId('tree-agent-aaaaaaaa-a1')).toBeNull();
+    fireEvent.click(screen.getByTestId('tree-toggle-aaaaaaaa'));
+    expect(screen.getByTestId('tree-drover-aaaaaaaa')).not.toBeNull();
+    expect(screen.getByTestId('status-agent-aaaaaaaa-a1').dataset.state).toBe('blocked');
+    fireEvent.click(screen.getByTestId('tree-agent-aaaaaaaa-a1'));
+    expect(onSelect).toHaveBeenCalledWith('aaaaaaaa', { kind: 'agent', id: 'a1' });
+    fireEvent.click(screen.getByTestId('corral-item-aaaaaaaa').querySelector('button')!);
+    expect(onSelect).toHaveBeenLastCalledWith('aaaaaaaa');
+  });
+  it('agent detail shows kill', () => {
+    const c = corral({ agents: [{ id: 'a1', model: 'opus', purpose: 'p', status: { state: 'idle' } }] });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(res(200, { screen: 's' })));
+    render(<NodeDetail corral={c} node={{ kind: 'agent', id: 'a1' }} onError={() => {}} />);
+    expect(screen.getByTestId('agent-kill-a1')).not.toBeNull();
+    expect(screen.getByTestId('agent-detail').textContent).toContain('opus');
   });
 });

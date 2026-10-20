@@ -5,6 +5,8 @@ import { CorralView } from './components/CorralView';
 import { AgentScreen } from './components/AgentScreen';
 import { NewDroverDialog } from './components/NewDroverDialog';
 import { CloseDialog } from './components/CloseDialog';
+import { NodeDetail } from './components/NodeDetail';
+import type { Node } from './util';
 
 const notify = (msg: string) => {
   if (typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification(msg);
@@ -22,6 +24,7 @@ export function App() {
   const [showClosed, setShowClosed] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [node, setNode] = useState<Node>();
   const [screen, setScreen] = useState<string>();
   const [toast, setToast] = useState('');
   useEffect(() => {
@@ -42,17 +45,22 @@ export function App() {
       <CorralList
         corrals={list}
         selected={selected}
+        node={node}
         showClosed={showClosed}
         onShowClosed={setShowClosed}
-        onSelect={(h) => { setSelected(h); setScreen(undefined); }}
+        onSelect={(h, n) => { setSelected(h); setNode(n); setScreen(undefined); }}
         onNew={() => setNewOpen(true)}
       />
       </div>
       <div className="col-md-8 col-xl-9">
       {current ? (
         <>
-          <CorralView corral={current} onScreen={setScreen} onClose={() => setClosing(true)} onError={setToast} />
-          {screen && <AgentScreen hid={current.hid} id={screen} onClose={() => setScreen(undefined)} />}
+          {node ? (
+            <NodeDetail corral={current} node={node} onError={setToast} />
+          ) : (
+            <CorralView corral={current} onScreen={setScreen} onClose={() => setClosing(true)} onError={setToast} />
+          )}
+          {!node && screen && <AgentScreen hid={current.hid} id={screen} onClose={() => setScreen(undefined)} />}
           {closing && <CloseDialog hid={current.hid} onClose={() => setClosing(false)} />}
         </>
       ) : (
@@ -60,7 +68,7 @@ export function App() {
       )}
       </div>
       </div>
-      {newOpen && <NewDroverDialog onClose={() => setNewOpen(false)} onCreated={setSelected} />}
+      {newOpen && <NewDroverDialog onClose={() => setNewOpen(false)} onCreated={(h) => { setSelected(h); setNode(undefined); }} />}
       {toast && <div role="alert" data-testid="toast" className="alert alert-danger position-fixed bottom-0 end-0 m-3 shadow">{toast}</div>}
     </div>
   );

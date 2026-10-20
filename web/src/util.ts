@@ -22,3 +22,5 @@ export const errMsg = (e: unknown) => {
   const b = (e as { body?: { error: string; stderr?: string } }).body;
   return b ? `${b.error}${b.stderr ? `: ${b.stderr}` : ''}` : String(e);
 };
+
+export type Node = { kind: 'drover' } | { kind: 'agent'; id: string };
