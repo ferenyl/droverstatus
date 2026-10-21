@@ -56,6 +56,37 @@ function Card({ c, t, onOpen }: { c: Corral; t: Task; onOpen: (hid: string, owne
   );
 }
 
+/** one corral's task columns; onFold absent = not foldable */
+export function Lane({ c, tasks, fold, onFold, onOpen }: { c: Corral; tasks: Task[]; fold?: boolean; onFold?: () => void; onOpen: (hid: string, owner?: string) => void }) {
+  const n = counts(c);
+  return (
+    <section className="lane" data-testid={`board-lane-${c.hid}`}>
+      <header className="lane-head">
+        {onFold && <button className="caret" data-testid={`board-lane-toggle-${c.hid}`} aria-expanded={!fold} aria-label={`${fold ? 'Expand' : 'Collapse'} ${c.slug}`} onClick={onFold}><span className={fold ? '' : 'rot'}><Icon n="caret" /></span></button>}
+        <StatusIcon state={badge(c)} id={`lane-${c.hid}`} decorative />
+        <b>{c.slug}</b> <code>{c.hid}</code>
+        <span className={`pill pill-${badge(c)}`}><StateIcon state={badge(c)} />{badge(c)}</span>
+        <span className="counts">{n.busy} busy · {n.idle} idle · {n.blocked} blocked</span>
+        <span className="muted spacer-l">{tasks.length} task{tasks.length === 1 ? '' : 's'}</span>
+      </header>
+      {!fold && (
+        <div className="cols">
+          {COLUMNS.map((col) => {
+            const ts = tasks.filter((t) => columnOf(t) === col.state);
+            return (
+              <div key={col.state} className="col-x" data-testid={`board-col-${c.hid}-${col.state}`}>
+                <h4><span className={`st st-${col.icon}`}><Icon n={col.icon} /></span> {col.name} <span className="muted">{ts.length}</span></h4>
+                {ts.length === 0 && <p className="empty-note small-note">No tasks</p>}
+                {ts.map((t) => <Card key={t.id} c={c} t={t} onOpen={onOpen} />)}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function Board(p: {
   corrals: Corral[];
   filter: BoardFilter;
@@ -68,6 +99,7 @@ export function Board(p: {
   useFlip(root);
   const { corrals: sel, closed } = p.filter;
   const visible = p.corrals.filter((c) => (closed || !c.closed || sel.includes(c.hid)) && (!sel.length || sel.includes(c.hid)));
+  const gstory = visible.some((c) => c.stories.some((s) => `${c.hid}:${s.id}` === p.filter.story)) ? p.filter.story : undefined;
   const setSel = (corrals: string[]) => p.onFilter({ ...p.filter, corrals });
   const toggleFold = (hid: string) => setFolded((f) => { const n = new Set(f); if (!n.delete(hid)) n.add(hid); return n; });
   return (
@@ -90,39 +122,24 @@ export function Board(p: {
           )}
         </div>
         <div className="chips">{sel.map((h) => <button key={h} className="chip-sel" onClick={() => setSel(sel.filter((x) => x !== h))} aria-label={`Remove filter ${h}`}>{p.corrals.find((c) => c.hid === h)?.slug ?? h} ×</button>)}</div>
+        {visible.some((c) => c.stories.length) && (
+          <select className="form-select form-select-sm story-select" data-testid="board-story-filter" aria-label="Filter by story" value={gstory ?? ''} onChange={(e) => p.onFilter({ ...p.filter, story: e.target.value || undefined })}>
+            <option value="">All stories</option>
+            {visible.filter((c) => c.stories.length).map((c) => (
+              <optgroup key={c.hid} label={c.slug}>
+                {c.stories.map((s) => <option key={s.id} value={`${c.hid}:${s.id}`}>{s.id} — {s.title}</option>)}
+              </optgroup>
+            ))}
+          </select>
+        )}
         <label className="toggle spacer-l"><input className="check" type="checkbox" data-testid="board-show-closed" checked={closed} onChange={(e) => p.onFilter({ ...p.filter, closed: e.target.checked })} /> show closed</label>
       </div>
       <div className="board" ref={root}>
         {visible.length === 0 && <p className="empty-note" data-testid="board-empty">No corrals to show</p>}
         {visible.map((c) => {
-          const n = counts(c);
-          const fold = folded.has(c.hid);
-          return (
-            <section key={c.hid} className="lane" data-testid={`board-lane-${c.hid}`}>
-              <header className="lane-head">
-                <button className="caret" data-testid={`board-lane-toggle-${c.hid}`} aria-expanded={!fold} aria-label={`${fold ? 'Expand' : 'Collapse'} ${c.slug}`} onClick={() => toggleFold(c.hid)}><span className={fold ? '' : 'rot'}><Icon n="caret" /></span></button>
-                <StatusIcon state={badge(c)} id={`lane-${c.hid}`} decorative />
-                <b>{c.slug}</b> <code>{c.hid}</code>
-                <span className={`pill pill-${badge(c)}`}><StateIcon state={badge(c)} />{badge(c)}</span>
-                <span className="counts">{n.busy} busy · {n.idle} idle · {n.blocked} blocked</span>
-                <span className="muted spacer-l">{c.tasks.length} task{c.tasks.length === 1 ? '' : 's'}</span>
-              </header>
-              {!fold && (
-                <div className="cols">
-                  {COLUMNS.map((col) => {
-                    const ts = c.tasks.filter((t) => columnOf(t) === col.state);
-                    return (
-                      <div key={col.state} className="col-x" data-testid={`board-col-${c.hid}-${col.state}`}>
-                        <h4><span className={`st st-${col.icon}`}><Icon n={col.icon} /></span> {col.name} <span className="muted">{ts.length}</span></h4>
-                        {ts.length === 0 && <p className="empty-note small-note">No tasks</p>}
-                        {ts.map((t) => <Card key={t.id} c={c} t={t} onOpen={p.onOpen} />)}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          );
+          const story = gstory?.startsWith(`${c.hid}:`) ? gstory.slice(c.hid.length + 1) : undefined;
+          const tasks = !gstory ? c.tasks : story ? c.tasks.filter((t) => t.story === story) : [];
+          return <Lane key={c.hid} c={c} tasks={tasks} fold={folded.has(c.hid)} onFold={() => toggleFold(c.hid)} onOpen={p.onOpen} />;
         })}
       </div>
     </div>

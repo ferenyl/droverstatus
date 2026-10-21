@@ -20,6 +20,7 @@ export interface Agent {
   purpose?: string;
   cwd?: string;
   worktree?: string | null;
+  story?: string;
   status: AgentStatus;
 }
 
@@ -36,6 +37,47 @@ export interface Task {
   owner?: string;
   state: TaskState | (string & {});
   attempts?: number;
+  story?: string;
+  /** plan | impl | review | pr; absent = impl */
+  kind?: string;
+}
+
+/** story statuses in board column order */
+export const STORY_STATES = ['backlog', 'planning', 'working', 'waiting-for-user', 'review', 'done'] as const;
+export type StoryState = (typeof STORY_STATES)[number];
+
+export interface StoryPr {
+  url?: string;
+  number?: number;
+  host?: string;
+  state?: string;
+  review?: string | null;
+}
+
+export interface Story {
+  id: string;
+  key?: string;
+  tracker?: string;
+  source?: string | null;
+  type?: string | null;
+  title: string;
+  url?: string | null;
+  summary?: string;
+  assignee?: string | null;
+  status: StoryState | (string & {});
+  blocked?: string | null;
+  order?: number;
+  branch?: string | null;
+  pr?: StoryPr | null;
+  clarified?: boolean;
+  updated_at?: string;
+}
+
+export interface StoryMode {
+  parallel?: boolean;
+  planner?: boolean;
+  pr?: boolean;
+  pr_review?: boolean;
 }
 
 export interface Message {
@@ -57,6 +99,8 @@ export interface Corral {
   drover: { mode?: string; model?: string; session_id?: string; tab_id?: number; status: AgentStatus };
   agents: Agent[];
   tasks: Task[];
+  stories: Story[];
+  story_mode?: StoryMode;
   messages: Message[];
   inbox: string[];
   reports: string[];

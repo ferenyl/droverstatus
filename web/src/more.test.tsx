@@ -24,7 +24,7 @@ const mockFetch = (...rs: Response[]) => {
 };
 const corral = (o: Partial<Corral> = {}): Corral => ({
   hid: 'aaaaaaaa', session: 's', project: '/p', slug: 'x', closed: false, liveness: 'alive',
-  drover: { status: { state: 'idle' } }, agents: [], tasks: [], messages: [], inbox: [], reports: [], ...o,
+  drover: { status: { state: 'idle' } }, agents: [], tasks: [], stories: [], messages: [], inbox: [], reports: [], ...o,
 });
 
 afterEach(() => {

@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { HID_RE } from '@droverstatus/shared';
-import type { Agent, AgentStatus, Corral, Liveness, Message, Task } from '@droverstatus/shared';
+import type { Agent, AgentStatus, Corral, Liveness, Message, Story, StoryMode, Task } from '@droverstatus/shared';
 
 async function text(file: string): Promise<string> {
   try {
@@ -24,8 +24,14 @@ async function json<T>(file: string): Promise<T | undefined> {
 /** `task set k=v` stores strings; tolerate missing/odd fields */
 function normTask(t: Partial<Task>): Task {
   const list = (v: unknown) => (Array.isArray(v) ? v.map(String) : []);
-  return { ...t, id: String(t.id ?? ''), title: String(t.title ?? ''), acceptance: list(t.acceptance), depends_on: list(t.depends_on), state: String(t.state ?? 'todo'), attempts: Number(t.attempts) || 0 };
+  return { ...t, id: String(t.id ?? ''), title: String(t.title ?? ''), acceptance: list(t.acceptance), depends_on: list(t.depends_on), state: String(t.state ?? 'todo'), attempts: Number(t.attempts) || 0, story: t.story == null ? undefined : String(t.story), kind: t.kind == null ? undefined : String(t.kind) };
 }
+
+function normStory(s: Partial<Story>): Story {
+  return { ...s, id: String(s.id ?? ''), title: String(s.title ?? ''), status: String(s.status ?? 'backlog') };
+}
+
+const byOrder = (a: Story, b: Story) => (a.order ?? Infinity) - (b.order ?? Infinity) || a.id.localeCompare(b.id, undefined, { numeric: true });
 
 export function parseMessages(log: string): Message[] {
   const out: Message[] = [];
@@ -59,6 +65,7 @@ interface RawAgent {
   purpose?: string;
   cwd?: string;
   worktree?: string | null;
+  story?: string | null;
 }
 
 interface RawRegistry {
@@ -69,6 +76,7 @@ interface RawRegistry {
   closing_at?: number;
   agents?: Record<string, RawAgent | undefined>;
   drover?: { mode?: string; model?: string; session_id?: string; tab_id?: number };
+  story_mode?: StoryMode;
 }
 
 export async function buildCorral(root: string, hid: string, liveness: Liveness): Promise<Corral | null> {
@@ -86,10 +94,12 @@ export async function buildCorral(root: string, hid: string, liveness: Liveness)
       purpose: a?.purpose,
       cwd: a?.cwd,
       worktree: a?.worktree,
+      story: a?.story ?? undefined,
       status: await status(id),
     })),
   );
   const tasks = await json<Task[]>(join(dir, 'tasks.json'));
+  const stories = await json<Story[]>(join(dir, 'stories.json'));
   const inbox = (await text(join(dir, 'inbox', 'drover.log'))).split('\n').filter(Boolean);
   return {
     hid,
@@ -108,6 +118,8 @@ export async function buildCorral(root: string, hid: string, liveness: Liveness)
     },
     agents,
     tasks: Array.isArray(tasks) ? tasks.filter((t) => t && typeof t === 'object').map(normTask) : [],
+    stories: Array.isArray(stories) ? stories.filter((s) => s && typeof s === 'object').map(normStory).sort(byOrder) : [],
+    story_mode: reg.story_mode && typeof reg.story_mode === 'object' ? reg.story_mode : undefined,
     messages: parseMessages(await text(join(dir, 'messages.log'))),
     inbox,
     reports: await names(join(dir, 'reports'), '.md'),

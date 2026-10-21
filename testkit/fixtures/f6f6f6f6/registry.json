@@ -1,0 +1,15 @@
+{
+  "id": "f6f6f6f6",
+  "session": "corral-story-f6f6f6f6",
+  "project": "/tmp/fake-story",
+  "slug": "story",
+  "drover_cwd": "/tmp/fake-story",
+  "closed": false,
+  "drover": { "mode": "corral", "model": "opus", "session_id": "sid-drover", "tab_id": 1 },
+  "story_mode": { "parallel": true, "planner": true, "pr": true, "pr_review": false },
+  "agents": {
+    "planner": { "purpose": "Shared story planner", "model": "opus", "tab_id": 2, "tab_name": "planner", "pane_id": "terminal_2", "cwd": "/tmp/fake-story", "worktree": null },
+    "123-dev": { "purpose": "Implements story 123", "model": "sonnet", "tab_id": 3, "tab_name": "123-dev", "pane_id": "terminal_3", "cwd": "/tmp/fake-wt/123", "worktree": "/tmp/fake-wt/123", "story": "123" },
+    "abc-12-dev": { "purpose": "Implements story abc-12", "model": "sonnet", "tab_id": 4, "tab_name": "abc-12-dev", "pane_id": "terminal_4", "cwd": "/tmp/fake-wt/abc-12", "worktree": "/tmp/fake-wt/abc-12", "story": "abc-12" }
+  }
+}

@@ -24,7 +24,7 @@ export function App() {
   });
   const [view, setView] = useState<'console' | 'board'>(() => (isBoard(location.pathname) ? 'board' : 'console'));
   const [bf, setBf] = useState<BoardFilter>(() => parseBoard(location.search));
-  const [sel, setSel] = useState<Sel | undefined>(() => parse(location.pathname));
+  const [sel, setSel] = useState<Sel | undefined>(() => parse(location.pathname, location.search));
   const selected = sel?.hid;
   const node = sel?.node;
   const push = (url: string) => {
@@ -47,7 +47,7 @@ export function App() {
         setBf(parseBoard(location.search));
       } else {
         setView('console');
-        setSel(parse(location.pathname));
+        setSel(parse(location.pathname, location.search));
       }
     };
     addEventListener('popstate', pop);
@@ -101,7 +101,7 @@ export function App() {
               {node ? (
                 <NodeDetail key={`${current.hid}/${node.kind}/${node.kind === 'agent' ? node.id : ''}`} corral={current} node={node} tab={tabOf(sel!)} onTab={(t: Tab) => go({ ...sel!, tab: t })} onError={setToast} />
               ) : (
-                <CorralView key={current.hid} corral={current} tab={tabOf(sel!)} onTab={(t: Tab) => go({ ...sel!, tab: t })} onOpenAgent={(id) => go({ hid: current.hid, node: { kind: 'agent', id }, tab: 'screen' })} onClose={() => setClosing(true)} onError={setToast} />
+                <CorralView key={current.hid} corral={current} tab={tabOf(sel!)} onTab={(t: Tab) => go({ hid: sel!.hid, tab: t, story: t === 'board' ? sel!.story : undefined })} story={sel!.story} onStory={(story) => go({ hid: current.hid, tab: 'board', story })} onOpenAgent={(id) => go({ hid: current.hid, node: { kind: 'agent', id }, tab: 'screen' })} onClose={() => setClosing(true)} onError={setToast} />
               )}
               {closing && <CloseDialog hid={current.hid} onClose={() => setClosing(false)} />}
             </>

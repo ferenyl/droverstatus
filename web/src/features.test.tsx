@@ -18,7 +18,7 @@ const jres = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 const corral = (o: Partial<Corral> = {}): Corral => ({
   hid: 'aaaaaaaa', session: 's', project: '/p', slug: 'one', closed: false, liveness: 'alive',
-  drover: { status: { state: 'idle' } }, agents: [], tasks: [], messages: [], inbox: [], reports: [], ...o,
+  drover: { status: { state: 'idle' } }, agents: [], tasks: [], stories: [], messages: [], inbox: [], reports: [], ...o,
 });
 const task = (id: string, state: string, o: Partial<Task> = {}): Task => ({ id, title: id.toUpperCase(), acceptance: [], depends_on: [], state, ...o });
 

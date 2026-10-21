@@ -10,6 +10,7 @@ const P: Record<string, string> = {
   send: 'M2 8 14 2l-4 12-2-5z',
   search: 'M7 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm4-1 3 3',
   overview: 'M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z',
+  board: 'M2 3h3v10H2zM6.5 3h3v7h-3zM11 3h3v5h-3z',
   tasks: 'm3 4 1.5 1.5L7 3M9 4.5h5M3 10l1.5 1.5L7 9M9 10.5h5',
   messages: 'M2 3h12v8H7l-3 3v-3H2z',
   reports: 'M4 2h6l3 3v9H4zM10 2v3h3M6 8h5M6 11h5',

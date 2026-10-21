@@ -20,7 +20,11 @@ No authentication, no multi-user support, not for remote access. It is a localho
 npm install
 npm run dev     # server (tsx watch) + vite dev server
 npm start       # build web, then serve everything from the server
+npm run build:dist   # single executable: dist/droverstatus (needs Node >= 22)
 ```
+Install the single file: `cp dist/droverstatus ~/.local/bin/` and run `droverstatus` (port: `droverstatus --port 5000` / `-p 5000`). Stop with Ctrl+C or Esc.
+
+In the background: `droverstatus </dev/null &>/dev/null &!`, stop with `killall droverstatus`.
 Default URL: http://127.0.0.1:4177
 
 ## Environment
@@ -29,7 +33,7 @@ Default URL: http://127.0.0.1:4177
 | `DROVER_ROOT` | `~/.claude/drover` |
 | `DROVER_SH` | `drover.sh` from `PATH`, else the newest `~/.claude/plugins/cache/*/*/*/skills/drover/scripts/drover.sh`; the server refuses to start if none is found |
 | `ZELLIJ_BIN` | `zellij` |
-| `PORT` | `4177` |
+| `PORT` | `4177` (overridden by `--port`/`-p`) |
 
 ## Tests
 ```

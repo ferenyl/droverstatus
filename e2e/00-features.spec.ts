@@ -23,7 +23,7 @@ const lanes = (page: import('@playwright/test').Page) =>
 test.describe('board', () => {
   test('lanes, columns, show-closed and filter deep links', async ({ page }) => {
     await page.goto('/board');
-    await expect(lanes(page)).toHaveCount(4); // A, B, D, E; closed C hidden
+    await expect(lanes(page)).toHaveCount(5); // A, B, D, E, F; closed C hidden
     await expect(page.getByTestId(`board-lane-${C}`)).toHaveCount(0);
     await expect(page.getByTestId(`board-col-${A}-done`).getByTestId(`task-card-${A}-scaffold`)).toBeVisible();
     await expect(page.getByTestId(`board-col-${A}-in_progress`).getByTestId(`task-card-${A}-api`)).toBeVisible();
@@ -34,7 +34,7 @@ test.describe('board', () => {
     await page.getByTestId('board-show-closed').check();
     await expect(page).toHaveURL(/\/board\?closed=1$/);
     await expect(page.getByTestId(`board-lane-${C}`)).toBeVisible();
-    await expect(lanes(page)).toHaveCount(5);
+    await expect(lanes(page)).toHaveCount(6);
 
     await page.getByTestId('board-filter').click();
     await page.getByTestId(`board-filter-${A}`).check();
@@ -42,7 +42,7 @@ test.describe('board', () => {
     await expect(page).toHaveURL(new RegExp(`/board\\?corrals=${A},${E}&closed=1$`));
     await expect(lanes(page)).toHaveCount(2);
     await page.getByTestId('board-filter-all').check();
-    await expect(lanes(page)).toHaveCount(5);
+    await expect(lanes(page)).toHaveCount(6);
   });
 
   test('deep link with ?corrals= and back/forward between views', async ({ page }) => {

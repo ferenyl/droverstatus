@@ -1,0 +1,7 @@
+[
+  { "id": "123-plan", "title": "Plan story 123", "acceptance": [], "depends_on": [], "owner": "planner", "state": "done", "attempts": 1, "story": "123", "kind": "plan" },
+  { "id": "123-impl", "title": "Keep return URL", "acceptance": ["redirects back"], "depends_on": ["123-plan"], "owner": "123-dev", "state": "in_progress", "attempts": 1, "story": "123", "kind": "impl" },
+  { "id": "abc-12-impl", "title": "CSV export", "acceptance": [], "depends_on": [], "owner": "abc-12-dev", "state": "done", "attempts": 1, "story": "abc-12", "kind": "impl" },
+  { "id": "abc-12-pr", "title": "Open PR", "acceptance": [], "depends_on": ["abc-12-impl"], "owner": "abc-12-dev", "state": "done", "attempts": 1, "story": "abc-12", "kind": "pr" },
+  { "id": "chore", "title": "Unrelated chore", "acceptance": [], "depends_on": [], "state": "todo", "attempts": 0 }
+]

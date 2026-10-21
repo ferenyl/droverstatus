@@ -5,13 +5,14 @@ import { badge, counts, errMsg } from '../util';
 import type { Tab } from '../route';
 import { AgentTable } from './AgentTable';
 import { TaskList } from './TaskList';
+import { CorralBoard } from './CorralBoard';
 import { MessageFeed } from './MessageFeed';
 import { Reports } from './Reports';
 import { PaneHeader } from './PaneHeader';
 import { Tabs } from './Tabs';
 import { Icon, StateIcon } from './Icon';
 
-export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => void; onOpenAgent: (id: string) => void; onClose: () => void; onError: (m: string) => void }) {
+export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => void; story?: string; onStory?: (id?: string) => void; onOpenAgent: (id: string) => void; onClose: () => void; onError: (m: string) => void }) {
   const c = p.corral;
   const tab = p.tab;
   const attach = `zellij attach ${c.session}`;
@@ -37,6 +38,7 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
         onChange={p.onTab}
         tabs={[
           { id: 'overview', label: 'Overview' },
+          { id: 'board', label: 'Board' },
           { id: 'tasks', label: `Tasks (${c.tasks.length})` },
           { id: 'messages', label: `Messages (${c.messages.length})` },
           { id: 'reports', label: `Reports (${c.reports.length})` },
@@ -56,6 +58,14 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
                 </dd>
                 <dt>drover</dt><dd>{c.drover.model} <span data-testid="drover-state" className={`pill pill-${c.drover.status.state}`}><StateIcon state={c.drover.status.state} />{c.drover.status.state}</span></dd>
                 <dt>agents</dt><dd className="mono">{n.busy} busy · {n.idle} idle · {n.blocked} blocked</dd>
+                {c.story_mode && (
+                  <>
+                    <dt>story mode</dt>
+                    <dd data-testid="story-mode" className="mono">
+                      {c.stories.length} stor{c.stories.length === 1 ? 'y' : 'ies'} · {c.story_mode.parallel ? 'parallel' : 'sequential'} · planner {c.story_mode.planner ? 'yes' : 'no'} · PR {c.story_mode.pr ? 'yes' : 'no'} · PR review {c.story_mode.pr_review ? 'yes' : 'no'}
+                    </dd>
+                  </>
+                )}
               </dl>
             </section>
             <section className="card-x">
@@ -66,6 +76,7 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
             </section>
           </>
         )}
+        {tab === 'board' && <CorralBoard corral={c} story={p.story} onStory={p.onStory ?? (() => {})} onOpen={(owner) => owner && p.onOpenAgent(owner)} />}
         {tab === 'tasks' && <section className="card-x flush">{c.tasks.length === 0 ? <p className="empty-note p">No tasks</p> : <TaskList tasks={c.tasks} />}</section>}
         {tab === 'messages' && <MessageFeed corral={c} onError={p.onError} />}
         {tab === 'reports' && <Reports hid={c.hid} ids={c.reports} />}
