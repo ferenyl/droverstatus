@@ -1,0 +1,24 @@
+# Example systemd user unit for the single-file build (dist/droverstatus).
+#
+#   npm run build:dist && cp dist/droverstatus ~/.local/bin/
+#   cp docs/droverstatus.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now droverstatus
+#   journalctl --user -u droverstatus -f
+#
+# Needs node, zellij, claude, jq and git on PATH; adjust Environment=PATH if they live elsewhere.
+
+[Unit]
+Description=droverstatus dashboard for drover corrals
+After=default.target
+
+[Service]
+Type=simple
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+# Environment=PORT=4177
+# Environment=DROVER_SH=%h/.claude/plugins/cache/<marketplace>/<plugin>/<version>/skills/drover/scripts/drover.sh
+ExecStart=%h/.local/bin/droverstatus
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

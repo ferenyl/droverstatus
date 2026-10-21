@@ -32,6 +32,8 @@ droverstatus </dev/null &>/dev/null &!               # in the background, stop w
 ```
 Open the URL it prints. Stop with Ctrl+C or Esc.
 
+To run it as a systemd user service that restarts on failure, see the example unit [docs/droverstatus.service](docs/droverstatus.service).
+
 ## Environment
 | Var | Default |
 |---|---|
