@@ -1,0 +1,33 @@
+version: 2
+
+# One pull request per ecosystem every Wednesday 05:00 Swedish time, containing all of its updates.
+# Review is requested from the code owner (see .github/CODEOWNERS).
+updates:
+  # npm workspaces (shared, server, web) share the root package-lock.json.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "05:00"
+      timezone: "Europe/Stockholm"
+    groups:
+      npm:
+        patterns: ["*"]
+    assignees: ["ferenyl"]
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "05:00"
+      timezone: "Europe/Stockholm"
+    groups:
+      github-actions:
+        patterns: ["*"]
+    assignees: ["ferenyl"]
+    commit-message:
+      prefix: "ci"
