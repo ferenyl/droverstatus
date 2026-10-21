@@ -85,5 +85,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, home = homedir(
     zellijBin: env.ZELLIJ_BIN ?? 'zellij',
     port: Number(env.PORT ?? 4177),
     host: '127.0.0.1',
+    dev: env.DROVER_DEV === '1',
   };
 }

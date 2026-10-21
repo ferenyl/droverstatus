@@ -15,9 +15,10 @@ export interface AppOpts {
   root: string;
   droverSh: string;
   webDist?: string;
+  dev?: boolean;
 }
 
-export async function buildApp({ root, droverSh, webDist }: AppOpts) {
+export async function buildApp({ root, droverSh, webDist, dev }: AppOpts) {
   const store = new Store(root);
   await store.scan();
   const app = Fastify({ bodyLimit: 256 * 1024 });
@@ -31,6 +32,10 @@ export async function buildApp({ root, droverSh, webDist }: AppOpts) {
     reply.code(status).send({ error: status === 500 ? 'internal error' : err.message });
   });
   registerRoutes(app, { store, cli: new DroverCli(droverSh), root });
+  if (dev) {
+    app.setNotFoundHandler((_req, reply) => reply.code(404).send({ error: 'not found (dev: API only, the UI is on the Vite dev server http://127.0.0.1:5187)' }));
+    return { app, store };
+  }
   if (typeof __WEB_ASSETS__ !== 'undefined' && !webDist) {
     const assets = new Map(Object.entries(__WEB_ASSETS__).map(([p, [type, b64]]) => [p, { type, gz: Buffer.from(b64, 'base64') }]));
     const index = assets.get('/index.html')!;
