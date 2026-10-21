@@ -15,7 +15,7 @@ export const COLUMNS = [
 
 export const columnOf = (t: Task) => (COLUMNS.some((c) => c.state === t.state) ? t.state : 'todo');
 
-function useFlip(root: React.RefObject<HTMLElement>) {
+function useFlip(root: React.RefObject<HTMLElement | null>) {
   const prev = useRef(new Map<string, { x: number; y: number }>());
   useLayoutEffect(() => {
     const r = root.current;
