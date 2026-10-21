@@ -84,6 +84,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, home = homedir(
     warnings: version && compareVersions(version, MIN_DROVER_VERSION) < 0 ? [`drover plugin ${version} is older than ${MIN_DROVER_VERSION}; some actions may misbehave`] : [],
     zellijBin: env.ZELLIJ_BIN ?? 'zellij',
     port: Number(env.PORT ?? 4177),
+    webPort: Number(env.WEB_PORT ?? 5187),
     host: '127.0.0.1',
     dev: env.DROVER_DEV === '1',
   };

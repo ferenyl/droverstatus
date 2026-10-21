@@ -15,7 +15,7 @@
     "web"
   ],
   "scripts": {
-    "dev": "bash -c 'export PORT=${PORT:-4187}; if (exec 3<>/dev/tcp/127.0.0.1/$PORT) 2>/dev/null; then echo \"port $PORT already in use\" >&2; exit 1; fi; trap \"trap - INT TERM EXIT; kill 0\" INT TERM EXIT; npm run dev -w server & npm run dev -w web & wait -n'",
+    "dev": "bash scripts/dev.sh",
     "build": "npm run build -w web",
     "build:dist": "npm run build && node scripts/build-dist.mjs",
     "start": "[ -d web/dist ] || npm run build; npm start -w server",

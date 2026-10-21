@@ -10,11 +10,14 @@ process.title = 'droverstatus';
 let config: ReturnType<typeof loadConfig>;
 try {
   config = loadConfig();
-  const { values } = parseArgs({ options: { port: { type: 'string', short: 'p' } } });
-  if (values.port !== undefined) {
-    config.port = Number(values.port);
-    if (!Number.isInteger(config.port) || config.port < 1 || config.port > 65535) throw new Error(`invalid port: ${values.port}`);
-  }
+  const { values } = parseArgs({ options: { port: { type: 'string', short: 'p' }, 'web-port': { type: 'string', short: 'w' } } });
+  const toPort = (v: string) => {
+    const n = Number(v);
+    if (!Number.isInteger(n) || n < 1 || n > 65535) throw new Error(`invalid port: ${v}`);
+    return n;
+  };
+  if (values.port !== undefined) config.port = toPort(values.port);
+  if (values['web-port'] !== undefined) config.webPort = toPort(values['web-port']);
 } catch (e) {
   console.error(`droverstatus: ${(e as Error).message}`);
   process.exit(1);
@@ -39,7 +42,11 @@ try {
   console.error(`droverstatus: cannot listen on ${config.host}:${config.port}: ${(e as Error).message}`);
   await shutdown(1);
 }
-console.log(`droverstatus on http://${config.host}:${config.port} (root ${config.root})`);
+const base = `http://${config.host}:${config.port}`;
+if (config.dev) {
+  console.log(`webui:  http://127.0.0.1:${config.webPort}`);
+  console.log(`server: ${base} (root ${config.root})`);
+} else console.log(`droverstatus: ${base} (root ${config.root})`);
 
 if (process.stdin.isTTY) {
   // Raw mode swallows SIGINT, so handle Ctrl+C here along with Esc

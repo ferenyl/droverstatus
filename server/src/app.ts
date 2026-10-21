@@ -16,12 +16,13 @@ export interface AppOpts {
   droverSh: string;
   webDist?: string;
   dev?: boolean;
+  webPort?: number;
 }
 
-export async function buildApp({ root, droverSh, webDist, dev }: AppOpts) {
+export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187 }: AppOpts) {
   const store = new Store(root);
   await store.scan();
-  const app = Fastify({ bodyLimit: 256 * 1024 });
+  const app = Fastify({ bodyLimit: 256 * 1024, forceCloseConnections: true });
   app.addHook('onRequest', async (req, reply) => {
     // DNS-rebinding guard: the API can launch agents
     const host = (req.headers.host ?? '').replace(/:\d+$/, '');
@@ -33,7 +34,7 @@ export async function buildApp({ root, droverSh, webDist, dev }: AppOpts) {
   });
   registerRoutes(app, { store, cli: new DroverCli(droverSh), root });
   if (dev) {
-    app.setNotFoundHandler((_req, reply) => reply.code(404).send({ error: 'not found (dev: API only, the UI is on the Vite dev server http://127.0.0.1:5187)' }));
+    app.setNotFoundHandler((_req, reply) => reply.code(404).send({ error: `not found (dev: API only, the UI is on the Vite dev server http://127.0.0.1:${webPort})` }));
     return { app, store };
   }
   if (typeof __WEB_ASSETS__ !== 'undefined' && !webDist) {
