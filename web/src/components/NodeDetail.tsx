@@ -66,7 +66,7 @@ export function NodeDetail(p: { corral: Corral; node: Node; tab: Tab; onTab: (t:
         extra={!c.closed && c.liveness !== 'dead' && isStuck(a?.status ?? d.status) && <span data-testid="agent-stuck" className="pill pill-blocked">stuck?</span>}
         actions={a && <>
           {!!a.queued && a.status.state !== 'blocked' && <button className="btn btn-sm btn-outline theme-primary" data-testid={`agent-flush-${a.id}`} onClick={() => api.flush(c.hid, a.id).catch((e) => onError(errMsg(e)))}><Icon n="send" /> Flush ({a.queued})</button>}
-          <button className="btn btn-sm btn-outline theme-danger" data-testid={`agent-kill-${a.id}`} onClick={() => api.kill(c.hid, a.id).catch((e) => onError(errMsg(e)))}><Icon n="x" /> Kill</button>
+          <button className="btn btn-sm btn-outline theme-danger" data-testid={`agent-kill-${a.id}`} onClick={() => confirm(`Kill agent ${a.id}?`) && api.kill(c.hid, a.id).catch((e) => onError(errMsg(e)))}><Icon n="x" /> Kill</button>
         </>}
       />
       <Tabs

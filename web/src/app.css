@@ -179,3 +179,4 @@ a.pill { text-decoration: none; }
 .md-body table { border-collapse: collapse; }
 .md-body th, .md-body td { border: 1px solid var(--bs-border-color, #8884); padding: .2rem .5rem; }
 .md-body img, .md-body svg { max-width: 100%; height: auto; }
+.feed-tools { display: flex; gap: .5rem; }

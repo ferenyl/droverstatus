@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import type { Corral } from '@droverstatus/shared';
 import { api } from '../api';
-import { badge, counts, errMsg } from '../util';
+import { badge, counts, errMsg, loadPref, savePref } from '../util';
 import type { Tab } from '../route';
 import { AgentTable } from './AgentTable';
 import { TaskList } from './TaskList';
@@ -21,7 +21,8 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
   const attach = `zellij attach ${c.session}`;
   const act = (f: () => Promise<unknown>) => f().catch((e) => p.onError(errMsg(e)));
   const n = counts(c);
-  const [taskStory, setTaskStory] = useState('');
+  const [taskStory, setTaskStory] = useState(() => (c.stories.some((s) => s.id === loadPref('taskStory')) ? loadPref('taskStory') : ''));
+  const [reviving, setReviving] = useState(false);
   const shownTasks = taskStory ? c.tasks.filter((t) => t.story === taskStory) : c.tasks;
   return (
     <div data-testid="corral-view" className="pane-in">
@@ -32,7 +33,7 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
         actions={
           <>
             {!c.closed && c.liveness !== 'alive' && (
-              <button className="btn btn-sm btn-solid theme-warning" data-testid="revive-btn" onClick={() => act(() => api.revive(c.hid))}><Icon n="play" /> Revive</button>
+              <button className="btn btn-sm btn-solid theme-warning" data-testid="revive-btn" disabled={reviving} onClick={() => { setReviving(true); void act(() => api.revive(c.hid)).finally(() => setReviving(false)); }}><Icon n="play" /> Revive</button>
             )}
             {!c.closed && <button className="btn btn-sm btn-outline theme-danger" data-testid="close-btn" onClick={p.onClose}><Icon n="stop" /> Close</button>}
           </>
@@ -80,7 +81,7 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
             <section className="card-x">
               <h3><Icon n="screen" /> Agents</h3>
               {c.agents.length === 0 ? <p className="empty-note">No agents yet</p> : (
-                <AgentTable corral={c} onScreen={p.onOpenAgent} onKill={(id) => act(() => api.kill(c.hid, id))} />
+                <AgentTable corral={c} onScreen={p.onOpenAgent} onKill={(id) => confirm(`Kill agent ${id}?`) && act(() => api.kill(c.hid, id))} />
               )}
             </section>
           </>
@@ -89,7 +90,7 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
         {tab === 'tasks' && (
           <section className="card-x flush">
             {c.stories.length > 0 && (
-              <select className="form-select form-select-sm story-select" data-testid="tasks-story-filter" aria-label="Filter by story" value={taskStory} onChange={(e) => setTaskStory(e.target.value)}>
+              <select className="form-select form-select-sm story-select" data-testid="tasks-story-filter" aria-label="Filter by story" value={taskStory} onChange={(e) => { savePref('taskStory', e.target.value); setTaskStory(e.target.value); }}>
                 <option value="">All stories</option>
                 {c.stories.map((s) => <option key={s.id} value={s.id}>{s.id} — {s.title}</option>)}
               </select>
@@ -102,7 +103,7 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
           <section data-testid="docs" className="card-x">
             {c.docs.length === 0 && <p className="empty-note">No docs yet</p>}
             {c.docs.map((d) => (
-              <Doc key={d.path} testId={`doc-${d.note || d.path}`} title={`${d.note || d.path}${d.agent ? ` · ${d.agent}` : ''} — ${d.path}`} load={() => api.doc(c.hid, d.path)} markdown={/\.(md|markdown)$/i.test(d.path)} />
+              <Doc key={d.path} testId={`doc-${d.note || d.path}`} title={`${d.note || d.path}${d.agent ? ` · ${d.agent}` : ''} — ${d.path}`} load={() => api.doc(c.hid, d.path)} markdown={/\.(md|markdown)$/i.test(d.path)} onArtifact={() => act(() => api.send(c.hid, `create a Claude artifact of ${d.path}`))} />
             ))}
           </section>
         )}
