@@ -14,6 +14,7 @@ export function applyEvent(prev: Map<string, Corral>, e: ServerEvent): Map<strin
 export function useCorrals(onEvent?: (prev: Map<string, Corral>, e: ServerEvent) => void) {
   const [corrals, setCorrals] = useState<Map<string, Corral>>(new Map());
   const [connected, setConnected] = useState(false);
+  const [lost, setLost] = useState(false);
   const ref = useRef(corrals);
   const cb = useRef(onEvent);
   cb.current = onEvent;
@@ -25,10 +26,13 @@ export function useCorrals(onEvent?: (prev: Map<string, Corral>, e: ServerEvent)
           ref.current = applyEvent(ref.current, e);
           setCorrals(ref.current);
         },
-        setConnected,
+        (up) => {
+          setConnected(up);
+          if (!up) setLost(true);
+        },
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
-  return { corrals, connected };
+  return { corrals, connected, lost };
 }
