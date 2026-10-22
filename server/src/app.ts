@@ -17,30 +17,43 @@ export interface AppOpts {
   webDist?: string;
   dev?: boolean;
   webPort?: number;
+  host?: string;
+  projectRoots?: string[];
 }
 
-export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187 }: AppOpts) {
+export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, host: bind = '127.0.0.1', projectRoots }: AppOpts) {
   const store = new Store(root);
   await store.scan();
   const app = Fastify({ bodyLimit: 256 * 1024, forceCloseConnections: true });
+  const wildcard = bind === '0.0.0.0' || bind === '::';
+  const bound = bind.includes(':') ? `[${bind}]` : bind;
+  const LOOPBACK = new Set(['127.0.0.1', 'localhost', '[::1]']);
+  // loopback names, the bound IP, and (wildcard bind) any IP literal; never other hostnames
+  const allowedHost = (h: string) =>
+    LOOPBACK.has(h) || h === bound || (wildcard && /^(\d{1,3}(\.\d{1,3}){3}|\[[0-9a-f:.]+\])$/i.test(h));
   app.addHook('onRequest', async (req, reply) => {
     // DNS-rebinding guard: the API can launch agents
     const host = (req.headers.host ?? '').replace(/:\d+$/, '');
-    if (host !== '127.0.0.1' && host !== 'localhost' && host !== '[::1]') return reply.code(403).send({ error: 'bad host' });
+    if (!allowedHost(host)) return reply.code(403).send({ error: 'bad host' });
     // cross-site POST/DELETE guard; non-browser clients send no Origin
     const origin = req.headers.origin;
     if (origin && req.method !== 'GET' && req.method !== 'HEAD') {
       // same origin as the Host (also through the Vite proxy) or the dev UI port
       const o = /^https?:\/\/([^/]+)$/.exec(origin)?.[1];
-      const loopback = o && /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(o);
-      if (!loopback || (o !== req.headers.host && o.replace(/^.*:/, '') !== String(webPort))) return reply.code(403).send({ error: 'bad origin' });
+      const oh = o?.replace(/:\d+$/, '') ?? '';
+      const uiOrigin = o?.replace(/^.*:/, '') === String(webPort) && (LOOPBACK.has(oh) || oh === bound);
+      if (!o || !allowedHost(oh) || (o !== req.headers.host && !uiOrigin)) return reply.code(403).send({ error: 'bad origin' });
     }
+  });
+  app.addHook('onSend', async (_req, reply) => {
+    reply.header('x-content-type-options', 'nosniff').header('x-frame-options', 'DENY');
+    reply.header('content-security-policy', "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
   });
   app.setErrorHandler((err: FastifyError, _req, reply) => {
     const status = err.statusCode && err.statusCode < 500 ? err.statusCode : 500;
     reply.code(status).send({ error: status === 500 ? 'internal error' : err.message });
   });
-  registerRoutes(app, { store, cli: new DroverCli(droverSh), root });
+  registerRoutes(app, { store, cli: new DroverCli(droverSh), root, projectRoots });
   if (dev) {
     app.setNotFoundHandler((_req, reply) => reply.code(404).send({ error: `not found (dev: API only, the UI is on the Vite dev server http://127.0.0.1:${webPort})` }));
     return { app, store };

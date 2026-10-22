@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+import { useState } from 'react';
 import type { Task } from '@droverstatus/shared';
 import { relTime } from '../util';
 import { StateIcon } from './Icon';
@@ -7,6 +8,8 @@ import { StateIcon } from './Icon';
 export const isReady = (t: Task, all: Task[]) => t.state === 'todo' && t.depends_on.every((d) => all.find((x) => x.id === d)?.state === 'done');
 
 export function TaskList({ tasks, all = tasks }: { tasks: Task[]; all?: Task[] }) {
+  const [showAll, setShowAll] = useState(false);
+  const shown = showAll ? tasks : tasks.slice(0, 100);
   const stories = tasks.some((t) => t.story);
   return (
     <div className="table-responsive">
@@ -15,7 +18,7 @@ export function TaskList({ tasks, all = tasks }: { tasks: Task[]; all?: Task[] }
           <tr><th>id</th>{stories && <th>story</th>}<th>title</th><th>state</th><th>owner</th><th>attempts</th><th>depends on</th><th>time</th></tr>
         </thead>
         <tbody>
-          {tasks.map((t) => (
+          {shown.map((t) => (
             <tr key={t.id} data-testid={`task-row-${t.id}`} className={(t.attempts ?? 0) >= 3 ? 'attempts-high' : undefined}>
               <td className="mono">{t.id}</td>{stories && <td className="mono">{t.story}</td>}<td>
                 {t.kind && t.kind !== 'impl' && <span data-testid={`task-kind-${t.id}`} className="pill">{t.kind}</span>} {t.title}
@@ -28,6 +31,7 @@ export function TaskList({ tasks, all = tasks }: { tasks: Task[]; all?: Task[] }
           ))}
         </tbody>
       </table>
+      {shown.length < tasks.length && <button className="btn btn-sm btn-outline" data-testid="tasks-more" onClick={() => setShowAll(true)}>Show all {tasks.length}</button>}
     </div>
   );
 }

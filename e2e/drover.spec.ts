@@ -15,6 +15,7 @@ const status = (hid: string, id: string, state: string) =>
   writeFileSync(join(root, hid, `status/${id}.json`), JSON.stringify({ state, at: new Date().toISOString() }));
 
 test.beforeEach(async ({ page }) => {
+  page.on('dialog', (d) => d.accept());
   mark = callsAll().length;
   await page.goto('/');
   await expect(page.getByTestId('conn-status')).toHaveText('online');
@@ -318,4 +319,11 @@ test('kill from agent detail, then agent-gone', async ({ page }) => {
   await expect(page.getByTestId(`tree-agent-${A}-gamma`)).toHaveCount(0);
   await expect(page.getByTestId('agent-detail')).toHaveCount(0);
   expect(calls()).toMatch(new RegExp(`^\\S+ kill ${A} --force gamma$`, 'm'));
+});
+
+test('isolation: HOME, CLAUDE_CONFIG_DIR and DROVER_ROOT are tmp, not the real ~/.claude', () => {
+  const tmp = join(root, '..');
+  expect(process.env.HOME).toBe(join(tmp, 'home'));
+  expect(process.env.CLAUDE_CONFIG_DIR).toBe(join(tmp, 'home', '.claude'));
+  expect(root.startsWith('/tmp/') || root.includes('droverstatus-e2e-')).toBe(true);
 });

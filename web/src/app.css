@@ -2,7 +2,7 @@
   color-scheme: dark;
   --bg: #0e1014; --panel: #14171d; --panel2: #1a1e26; --border: #262b35; --fg: #d9dce2; --muted: #8b92a0;
   --accent: #5b8def; --ok: #3fb950; --idle: #7d8590; --warn: #f2a93b; --bad: #f85149; --term: #090b0e; --termfg: #c9d1d9;
-  --sp: .5rem; --mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+  --sp: .5rem; --mono: 'CaskaydiaCove Nerd Font Mono', 'CaskaydiaCove NFM', ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -179,3 +179,4 @@ a.pill { text-decoration: none; }
 .md-body table { border-collapse: collapse; }
 .md-body th, .md-body td { border: 1px solid var(--bs-border-color, #8884); padding: .2rem .5rem; }
 .md-body img, .md-body svg { max-width: 100%; height: auto; }
+.feed-tools { display: flex; gap: .5rem; }

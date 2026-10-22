@@ -9,14 +9,14 @@ import { NodeDetail } from './components/NodeDetail';
 import { build, buildBoard, isBoard, parse, parseBoard, tabOf, type BoardFilter, type Sel, type Tab } from './route';
 import { Board } from './components/Board';
 import { Icon } from './components/Icon';
-import { attention } from './util';
+import { attention, loadPref, savePref } from './util';
 
 const notify = (msg: string) => {
   if (typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification(msg);
 };
 
 export function App() {
-  const { corrals, connected } = useCorrals((prev, e) => {
+  const { corrals, connected, lost } = useCorrals((prev, e) => {
     if (e.type !== 'corral-updated') return;
     const old = prev.get(e.hid);
     for (const a of e.corral.agents)
@@ -54,7 +54,11 @@ export function App() {
     addEventListener('popstate', pop);
     return () => removeEventListener('popstate', pop);
   }, []);
-  const [showClosed, setShowClosed] = useState(false);
+  const [showClosed, setShowClosed] = useState(() => loadPref('showClosed') === '1');
+  const changeShowClosed = (v: boolean) => {
+    savePref('showClosed', v ? '1' : '');
+    setShowClosed(v);
+  };
   const [newOpen, setNewOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const [toast, setToast] = useState('');
@@ -84,7 +88,7 @@ export function App() {
     <div className="shell">
       <header className="topbar">
         <span className="brand"><Icon n="box" /> Droverstatus</span>
-        <span data-testid="conn-status" className={`conn ${connected ? 'up' : 'down'}`}><span className="dot" aria-hidden="true" />{connected ? 'online' : 'offline'}</span>
+        <span data-testid="conn-status" role="status" aria-live="polite" className={`conn ${connected ? 'up' : 'down'}`}><span className="dot" aria-hidden="true" />{connected ? 'online' : 'offline'}</span>
         <nav className="views" aria-label="Views">
           <a href={build(sel)} data-testid="nav-console" aria-current={view === 'console' ? 'page' : undefined} className={view === 'console' ? 'on' : ''} onClick={(e) => { e.preventDefault(); go(sel); }}>Console</a>
           <a href={buildBoard(bf)} data-testid="nav-board" aria-current={view === 'board' ? 'page' : undefined} className={view === 'board' ? 'on' : ''} onClick={(e) => { e.preventDefault(); goBoard(bf); }}>Board</a>
@@ -92,6 +96,7 @@ export function App() {
         <span className="spacer" />
         <button className="btn btn-sm btn-solid theme-primary" data-testid="new-drover-btn" onClick={() => setNewOpen(true)}><Icon n="plus" /> New drover</button>
       </header>
+      {!connected && lost && <div role="alert" data-testid="offline-banner" className="alert theme-warning m-0">Connection lost — reconnecting; data may be stale.</div>}
       {view === 'board' ? (
         <main className="pane board-pane">
           <Board corrals={list} filter={bf} onFilter={goBoard} onOpen={(hid, owner) => go(owner ? { hid, node: { kind: 'agent', id: owner }, tab: 'screen' } : { hid })} />
@@ -104,7 +109,7 @@ export function App() {
             selected={selected}
             node={node}
             showClosed={showClosed}
-            onShowClosed={setShowClosed}
+            onShowClosed={changeShowClosed}
             onSelect={(h, n) => go({ hid: h, node: n })}
           />
         </aside>
@@ -125,7 +130,7 @@ export function App() {
       </div>
       )}
       {newOpen && <NewDroverDialog onClose={() => setNewOpen(false)} onCreated={(h) => go({ hid: h })} />}
-      {toast && <div role="alert" data-testid="toast" className="toast-x">{toast}</div>}
+      {toast && <div role="alert" aria-live="assertive" data-testid="toast" className="toast-x">{toast}</div>}
     </div>
   );
 }

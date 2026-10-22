@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# Usage: npm run dev -- [-p|--port API_PORT] [-w|--web-port WEB_PORT]
-export PORT=${PORT:-4187} WEB_PORT=${WEB_PORT:-5187}
+# Usage: npm run dev -- [-p|--port API_PORT] [-w|--web-port WEB_PORT] [--bind IP]
+export PORT=${PORT:-4187} WEB_PORT=${WEB_PORT:-5187} BIND_ADDR=${BIND_ADDR:-127.0.0.1}
 while [ $# -gt 0 ]; do
   case $1 in
     -p|--port) PORT=$2; shift 2 ;;
     -w|--web-port) WEB_PORT=$2; shift 2 ;;
+    --bind) BIND_ADDR=$2; shift 2 ;;
     *) echo "unknown option: $1" >&2; exit 1 ;;
   esac
 done

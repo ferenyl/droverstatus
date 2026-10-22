@@ -23,7 +23,16 @@ export function listSessions(zellijBin: string): Promise<Map<string, boolean> | 
 }
 
 export function startLiveness(store: Store, zellijBin: string, intervalMs = 5000): () => void {
-  const tick = async () => store.setSessions(await listSessions(zellijBin));
+  let running = false;
+  const tick = async () => {
+    if (running) return;
+    running = true;
+    try {
+      store.setSessions(await listSessions(zellijBin));
+    } finally {
+      running = false;
+    }
+  };
   void tick();
   // idle when nobody watches (no SSE client) or every corral is closed
   // a fresh viewer must not get a snapshot with stale liveness

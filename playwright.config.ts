@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { defineConfig } from '@playwright/test';
 
-// Run via: npm run test:e2e -- npx playwright test
+// Run via: npm run test:e2e -- npx playwright test (testkit/e2e.sh isolates HOME/CLAUDE_CONFIG_DIR/DROVER_ROOT)
 export default defineConfig({
   testDir: 'e2e',
   workers: 1,
