@@ -53,3 +53,19 @@ export const attention = (c: Corral) => {
   if (queued) reasons.push(`${queued} queued message${queued > 1 ? 's' : ''}`);
   return { count: blocked.length + stuck + retries + stories + queued, reasons };
 };
+
+/** localStorage-backed UI state; storage may be unavailable */
+export const loadPref = (k: string, d = ''): string => {
+  try {
+    return localStorage.getItem(`droverstatus.${k}`) ?? d;
+  } catch {
+    return d;
+  }
+};
+export const savePref = (k: string, v: string) => {
+  try {
+    localStorage.setItem(`droverstatus.${k}`, v);
+  } catch {
+    /* ignore */
+  }
+};

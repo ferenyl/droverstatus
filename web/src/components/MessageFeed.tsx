@@ -38,10 +38,17 @@ export function MessageFeed({ corral, messages = corral.messages, compose, onErr
   const offset = older?.offset ?? corral.messages_offset;
   const loadOlder = () =>
     api.olderMessages(corral.hid, offset).then((r) => setOlder({ messages: [...r.messages, ...(older?.messages ?? [])], offset: r.offset }), (err) => onError(errMsg(err)));
-  const shown = own && older ? [...older.messages, ...messages] : messages;
+  const [q, setQ] = useState('');
+  const all = own && older ? [...older.messages, ...messages] : messages;
+  const needle = q.trim().toLowerCase();
+  const shown = needle ? all.filter((m) => `${m.from} ${m.to} ${m.text}`.toLowerCase().includes(needle)) : all;
   return (
     <section data-testid="message-feed" className="feed">
       {own && offset > 0 && <button className="btn btn-sm btn-outline" data-testid="messages-older" onClick={loadOlder}>Load older</button>}
+      <div className="feed-tools">
+        <input className="form-control form-control-sm" data-testid="messages-filter" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by agent or text" aria-label="Filter messages" />
+        <button className="btn btn-sm btn-outline" data-testid="messages-latest" onClick={() => document.querySelector('[data-testid=message-feed] .msgs li:last-child')?.scrollIntoView?.({ block: 'end' })}>Jump to latest</button>
+      </div>
       {messages.length === 0 && <p className="empty-note">No messages</p>}
       <ul className="msgs">
         {shown.map((m, i) => (
