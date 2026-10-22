@@ -34,6 +34,44 @@ async function json<T>(file: string): Promise<T | undefined> {
   }
 }
 
+/** drop cached reads for everything under a removed corral dir */
+function forget(dir: string): void {
+  for (const m of [jsonCache, tailCache, countCache]) for (const k of m.keys()) if (k.startsWith(`${dir}/`)) m.delete(k);
+}
+
+const countCache = new Map<string, { key: string; size: number; total: number }>();
+
+/** newline count of a log, incremental; reads no tail window */
+export async function countLines(file: string): Promise<number> {
+  const key = await stamp(file);
+  if (!key) {
+    countCache.delete(file);
+    return 0;
+  }
+  const hit = countCache.get(file);
+  if (hit?.key === key) return hit.total;
+  let fh;
+  try {
+    fh = await open(file, 'r');
+    const size = (await fh.stat()).size;
+    let from = hit && size >= hit.size ? hit.size : 0;
+    let total = hit && size >= hit.size ? hit.total : 0;
+    const buf = Buffer.alloc(64 * 1024);
+    while (from < size) {
+      const { bytesRead } = await fh.read(buf, 0, buf.length, from);
+      if (!bytesRead) break;
+      for (let i = 0; i < bytesRead; i++) if (buf[i] === 10) total++;
+      from += bytesRead;
+    }
+    countCache.set(file, { key, size, total });
+    return total;
+  } catch {
+    return 0;
+  } finally {
+    await fh?.close();
+  }
+}
+
 const TAIL_CAP = 200;
 const TAIL_WINDOW = 256 * 1024;
 
@@ -203,7 +241,7 @@ export async function buildCorral(root: string, hid: string, liveness: Liveness)
       story: a?.story ?? undefined,
       session_id: a?.claude_session_id,
       created: a?.created,
-      queued: (await tailLines(join(dir, 'queue', `${id}.txt`), 1)).total || undefined,
+      queued: (await countLines(join(dir, 'queue', `${id}.txt`))) || undefined,
       status: await status(id),
     })),
   );
@@ -244,6 +282,8 @@ export async function buildCorral(root: string, hid: string, liveness: Liveness)
 
 export class Store extends EventEmitter {
   private corrals = new Map<string, Corral>();
+  /** last emitted serialization per hid, so a refresh stringifies only the new build */
+  private serial = new Map<string, string>();
   /** session name -> alive; undefined = unknown */
   private sessions: Map<string, boolean> | undefined;
 
@@ -293,10 +333,15 @@ export class Store extends EventEmitter {
     }
     next.liveness = this.liveness(next.session);
     this.corrals.set(hid, next);
-    if (emit && JSON.stringify(prev) !== JSON.stringify(next)) this.emit('updated', hid, next);
+    const ser = JSON.stringify(next);
+    const changed = this.serial.get(hid) !== ser;
+    this.serial.set(hid, ser);
+    if (emit && changed) this.emit('updated', hid, next);
   }
 
   remove(hid: string): void {
+    this.serial.delete(hid);
+    forget(join(this.root, hid));
     if (this.corrals.delete(hid)) this.emit('removed', hid);
   }
 
@@ -308,6 +353,7 @@ export class Store extends EventEmitter {
       if (liveness !== c.liveness) {
         const next = { ...c, liveness };
         this.corrals.set(hid, next);
+        this.serial.set(hid, JSON.stringify(next));
         this.emit('updated', hid, next);
       }
     }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { accessSync, constants, existsSync, readdirSync, readFileSync } from 'node:fs';
+import { accessSync, constants, existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { delimiter, dirname, join } from 'node:path';
 
@@ -35,12 +35,12 @@ const subdirs = (d: string) => {
 };
 
 /** drover.sh from PATH, else the newest ~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/skills/drover/scripts/drover.sh */
-export function findDroverSh(pathEnv = process.env.PATH ?? '', home = homedir()): string | undefined {
+export function findDroverSh(pathEnv = process.env.PATH ?? '', home = homedir(), claudeDir = join(home, '.claude')): string | undefined {
   for (const dir of pathEnv.split(delimiter).filter(Boolean)) {
     const f = join(dir, 'drover.sh');
     if (executable(f)) return f;
   }
-  const cache = join(home, '.claude', 'plugins', 'cache');
+  const cache = join(claudeDir, 'plugins', 'cache');
   const found: { file: string; version: string }[] = [];
   for (const m of subdirs(cache))
     for (const p of subdirs(join(cache, m)))
@@ -69,23 +69,36 @@ export function pluginVersion(droverSh: string): string | undefined {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env, home = homedir()) {
-  const droverSh = env.DROVER_SH ?? findDroverSh(env.PATH, home);
+  const claudeDir = env.CLAUDE_CONFIG_DIR || join(home, '.claude');
+  const droverSh = env.DROVER_SH ?? findDroverSh(env.PATH, home, claudeDir);
   if (!droverSh || !existsSync(droverSh))
     throw new Error(
       droverSh
         ? `DROVER_SH does not exist: ${droverSh}`
-        : 'drover.sh not found (not on PATH, not in ~/.claude/plugins/cache): set DROVER_SH to its full path',
+        : `drover.sh not found (not on PATH, not in ${join(claudeDir, 'plugins', 'cache')}): set DROVER_SH to its full path`,
     );
+  const port = (name: string, def: number) => {
+    const n = Number(env[name] ?? def);
+    if (!Number.isInteger(n) || n < 1 || n > 65535) throw new Error(`invalid ${name}: ${env[name]}`);
+    return n;
+  };
   const version = pluginVersion(droverSh);
   return {
-    root: env.DROVER_ROOT ?? join(home, '.claude', 'drover'),
+    root: env.DROVER_ROOT ?? join(claudeDir, 'drover'),
     droverSh,
     droverVersion: version,
     warnings: version && compareVersions(version, MIN_DROVER_VERSION) < 0 ? [`drover plugin ${version} is older than ${MIN_DROVER_VERSION}; some actions may misbehave`] : [],
     zellijBin: env.ZELLIJ_BIN ?? 'zellij',
-    port: Number(env.PORT ?? 4177),
-    webPort: Number(env.WEB_PORT ?? 5187),
-    host: '127.0.0.1',
+    port: port('PORT', 4177),
+    webPort: port('WEB_PORT', 5187),
+    projectRoots: (env.DROVER_PROJECT_ROOTS ?? '').split(delimiter).filter(Boolean).map((d) => {
+      try {
+        return realpathSync(d);
+      } catch {
+        return d;
+      }
+    }),
+    host: env.BIND_ADDR || '127.0.0.1',
     dev: env.DROVER_DEV === '1',
   };
 }

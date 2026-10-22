@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { existsSync, statSync } from 'node:fs';
-import { readFile, stat } from 'node:fs/promises';
-import { isAbsolute, join } from 'node:path';
+import { readFile, realpath, stat } from 'node:fs/promises';
+import { isAbsolute, join, sep } from 'node:path';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { HID_RE, KEBAB_RE, MODELS } from '@droverstatus/shared';
 import type { ApiError, Corral, ServerEvent } from '@droverstatus/shared';
@@ -14,6 +14,9 @@ export interface Deps {
   store: Store;
   cli: DroverCli;
   root: string;
+  /** optional allowlist for new-corral project dirs (empty = any existing dir) */
+  projectRoots?: string[];
+  maxSse?: number;
 }
 
 const fail = (reply: FastifyReply, status: number, body: ApiError) => reply.code(status).send(body);
@@ -22,8 +25,23 @@ const cliFail = (reply: FastifyReply, r: CliResult) =>
 
 const MAX_TEXT = 100_000;
 const MAX_DOC = 1_000_000;
+const DOC_EXT = /\.(md|markdown|txt|log)$/i;
+const SECRET_DIRS = new Set(['.ssh', '.gnupg', '.aws', '.kube', '.docker', '.password-store']);
+const inside = (child: string, parent: string) => child === parent || child.startsWith(parent.endsWith(sep) ? parent : parent + sep);
 
-export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps): void {
+export function registerRoutes(app: FastifyInstance, { store, cli, root, projectRoots = [], maxSse = 50 }: Deps): void {
+  /** one lifecycle action per key at a time; a second concurrent request gets 409 */
+  const inflight = new Set<string>();
+  const guarded = async <T>(key: string, reply: FastifyReply, fn: () => Promise<T>) => {
+    if (inflight.has(key)) return fail(reply, 409, { error: 'action already in progress' });
+    inflight.add(key);
+    try {
+      return await fn();
+    } finally {
+      inflight.delete(key);
+    }
+  };
+  let sseClients = 0;
   const corralOr404 = (hid: string, reply: FastifyReply) => {
     if (!HID_RE.test(hid)) return void fail(reply, 400, { error: 'bad hid' });
     const c = store.get(hid);
@@ -39,6 +57,8 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
   app.get('/api/corrals', async () => store.list());
 
   app.get('/api/events', (req, reply) => {
+    if (sseClients >= maxSse) return fail(reply, 503, { error: 'too many event streams' });
+    sseClients++;
     reply.hijack();
     const res = reply.raw;
     res.writeHead(200, {
@@ -56,9 +76,17 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
     const onUpdated = (hid: string, corral: Corral) => send({ type: 'corral-updated', hid, corral });
     const onRemoved = (hid: string) => send({ type: 'corral-removed', hid });
     store.on('updated', onUpdated).on('removed', onRemoved);
-    const ping = setInterval(() => res.write(': ping\n\n'), 25_000);
+    const ping = setInterval(() => {
+      try {
+        res.write(': ping\n\n');
+      } catch {
+        clearInterval(ping);
+      }
+    }, 25_000);
     res.on('error', () => clearInterval(ping));
+    res.on('close', () => clearInterval(ping));
     req.raw.on('close', () => {
+      sseClients--;
       clearInterval(ping);
       store.off('updated', onUpdated).off('removed', onRemoved);
     });
@@ -71,6 +99,10 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
     if (!KEBAB_RE.test(slug)) return fail(reply, 400, { error: 'slug must be kebab-case' });
     if (!(MODELS as string[]).includes(model)) return fail(reply, 400, { error: 'bad model' });
     if (!isAbsolute(dir) || !existsSync(dir) || !statSync(dir).isDirectory()) return fail(reply, 400, { error: 'project dir must be an existing absolute path' });
+    if (projectRoots.length) {
+      const real = await realpath(dir).catch(() => dir);
+      if (!projectRoots.some((r) => inside(real, r))) return fail(reply, 403, { error: 'project dir outside allowed roots' });
+    }
     const r = await cli.newDrover(slug, dir, model, brief);
     if (!r.ok) return cliFail(reply, r);
     if (!r.hid) return fail(reply, 500, { error: 'no HID in output', stderr: r.stdout });
@@ -83,17 +115,21 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
     if (c.closed) return fail(reply, 409, { error: 'corral already closed' });
     const w = req.query.worktrees;
     if (w !== undefined && w !== 'remove' && w !== 'keep') return fail(reply, 400, { error: 'worktrees must be remove|keep' });
-    const r = await cli.close(req.params.hid, w);
-    if (r.code === 4) return fail(reply, 409, { error: 'worktrees exist', stderr: r.stderr, code: 4, worktrees: parseWorktrees(r.stdout) });
-    return r.ok ? { ok: true } : cliFail(reply, r);
+    return guarded(c.hid, reply, async () => {
+      const r = await cli.close(req.params.hid, w);
+      if (r.code === 4) return fail(reply, 409, { error: 'worktrees exist', stderr: r.stderr, code: 4, worktrees: parseWorktrees(r.stdout) });
+      return r.ok ? { ok: true } : cliFail(reply, r);
+    });
   });
 
   app.post<{ Params: { hid: string } }>('/api/corrals/:hid/revive', async (req, reply) => {
     const c = corralOr404(req.params.hid, reply);
     if (!c) return;
     if (c.closed || c.liveness === 'alive') return fail(reply, 409, { error: 'corral is closed or alive' });
-    const r = await cli.revive(c.hid);
-    return r.ok ? { ok: true } : cliFail(reply, r);
+    return guarded(c.hid, reply, async () => {
+      const r = await cli.revive(c.hid);
+      return r.ok ? { ok: true } : cliFail(reply, r);
+    });
   });
 
   app.post<{ Params: { hid: string }; Body: { message?: string; to?: string } }>('/api/corrals/:hid/messages', async (req, reply) => {
@@ -111,8 +147,10 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
     const c = corralOr404(req.params.hid, reply);
     if (!c || badId(req.params.id, reply)) return;
     if (!c.agents.some((a) => a.id === req.params.id)) return fail(reply, 404, { error: 'unknown agent' });
-    const r = await cli.flush(c.hid, req.params.id);
-    return r.ok ? { ok: true } : cliFail(reply, r);
+    return guarded(`${c.hid}/${req.params.id}`, reply, async () => {
+      const r = await cli.flush(c.hid, req.params.id);
+      return r.ok ? { ok: true } : cliFail(reply, r);
+    });
   });
 
   app.get<{ Params: { hid: string }; Querystring: { before?: string } }>('/api/corrals/:hid/messages', async (req, reply) => {
@@ -127,8 +165,10 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
     const c = corralOr404(req.params.hid, reply);
     if (!c || badId(req.params.id, reply)) return;
     if (!c.agents.some((a) => a.id === req.params.id)) return fail(reply, 404, { error: 'unknown agent' });
-    const r = await cli.kill(c.hid, req.params.id);
-    return r.ok ? { ok: true } : cliFail(reply, r);
+    return guarded(`${c.hid}/${req.params.id}`, reply, async () => {
+      const r = await cli.kill(c.hid, req.params.id);
+      return r.ok ? { ok: true } : cliFail(reply, r);
+    });
   });
 
   app.get<{ Params: { hid: string; id: string }; Querystring: { lines?: string } }>(
@@ -142,8 +182,10 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
     },
   );
 
-  const md = async (file: string, reply: FastifyReply) => {
+  /** `within`: the realpath of the file must stay inside this dir (symlink escape) */
+  const md = async (file: string, reply: FastifyReply, within?: string) => {
     try {
+      if (within && !inside(await realpath(file), await realpath(within))) return fail(reply, 404, { error: 'not found' });
       const st = await stat(file);
       if (!st.isFile()) return fail(reply, 404, { error: 'not found' });
       if (st.size > MAX_DOC) return fail(reply, 413, { error: 'doc too large' });
@@ -156,7 +198,7 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
   app.get<{ Params: { hid: string; id: string } }>('/api/corrals/:hid/stories/:id', async (req, reply) => {
     if (!corralOr404(req.params.hid, reply)) return;
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(req.params.id)) return fail(reply, 400, { error: 'bad story id' });
-    return md(join(root, req.params.hid, 'stories', `${req.params.id}.md`), reply);
+    return md(join(root, req.params.hid, 'stories', `${req.params.id}.md`), reply, join(root, req.params.hid));
   });
 
   // only files registered for the corral can be read
@@ -164,12 +206,20 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
     if (!corralOr404(req.params.hid, reply)) return;
     const path = req.query.path;
     if (typeof path !== 'string' || !(await docsOf(join(root, req.params.hid))).some((d) => d.path === path)) return fail(reply, 404, { error: 'unknown doc' });
-    return md(path, reply);
+    // docs.json is agent-writable: only text/markdown files, resolved through symlinks, never secret dirs
+    let real: string;
+    try {
+      real = await realpath(path);
+    } catch {
+      return fail(reply, 404, { error: 'not found' });
+    }
+    if (!DOC_EXT.test(real) || real.split(sep).some((p) => SECRET_DIRS.has(p))) return fail(reply, 404, { error: 'unknown doc' });
+    return md(real, reply);
   });
 
   app.get<{ Params: { hid: string } }>('/api/corrals/:hid/brief', async (req, reply) => {
     if (!corralOr404(req.params.hid, reply)) return;
-    return md(join(root, req.params.hid, 'brief.md'), reply);
+    return md(join(root, req.params.hid, 'brief.md'), reply, join(root, req.params.hid));
   });
 
   // on demand: runs git status per worktree
@@ -181,11 +231,6 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
 
   app.get<{ Params: { hid: string; id: string } }>('/api/corrals/:hid/reports/:id', async (req, reply) => {
     if (!corralOr404(req.params.hid, reply) || badId(req.params.id, reply)) return;
-    try {
-      const md = await readFile(join(root, req.params.hid, 'reports', `${req.params.id}.md`), 'utf8');
-      return reply.type('text/markdown').send(md);
-    } catch {
-      return fail(reply, 404, { error: 'no report' });
-    }
+    return md(join(root, req.params.hid, 'reports', `${req.params.id}.md`), reply, join(root, req.params.hid));
   });
 }

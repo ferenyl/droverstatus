@@ -9,7 +9,7 @@ Local web UI for drover (the `ferenyl-claude` plugin) corrals: live view of drov
 - The drover plugin `ferenyl-claude` >= 0.9.0 (provides `drover.sh`)
 
 ## What this is not
-No authentication, no multi-user support, not for remote access. It is a localhost-only tool; see [SECURITY.md](SECURITY.md).
+No authentication, no multi-user support, not for remote access. It listens on loopback by default; see [SECURITY.md](SECURITY.md).
 
 ## Screenshots
 ![Overview](docs/screenshots/1440-dark-overview.png)
@@ -27,6 +27,7 @@ npm run build:dist   # single executable: dist/droverstatus (needs Node >= 22)
 ```
 ./dist/droverstatus              # run directly, UI + API on http://127.0.0.1:4177
 ./dist/droverstatus -p 5000      # other port (--port 5000)
+./dist/droverstatus --bind 192.168.1.5   # non-loopback, no auth: trusted networks only
 cp dist/droverstatus ~/.local/bin/ && droverstatus   # install on PATH
 droverstatus </dev/null &>/dev/null &!               # in the background, stop with: killall droverstatus
 ```
@@ -42,6 +43,7 @@ To run it as a systemd user service that restarts on failure, see the example un
 | `ZELLIJ_BIN` | `zellij` |
 | `PORT` | `4177` (overridden by `--port`/`-p`) |
 | `WEB_PORT` | `5187`, dev only: Vite UI port (overridden by `--web-port`/`-w`) |
+| `BIND_ADDR` | `127.0.0.1` (overridden by `--bind`); non-loopback exposes an unauthenticated API, see [Security](#security) |
 
 ## Tests
 ```
@@ -59,7 +61,7 @@ While it runs, in `$DROVER_ROOT`:
 - `.zellij-sessions` – edit to flip liveness (`(EXITED` = dead)
 
 ## Security
-See [SECURITY.md](SECURITY.md). The server binds to 127.0.0.1 only and rejects other `Host` headers. It can launch and stop agents, so do not expose it (no port forwarding or reverse proxy).
+See [SECURITY.md](SECURITY.md). By default the server binds to 127.0.0.1. `--bind <ip>` (or `BIND_ADDR`) listens elsewhere, with a warning at startup. There is no authentication or CSRF protection: anyone who can reach the port can launch and stop agents. Only bind to trusted networks, at your own risk. `Host` headers other than loopback and the bound IP are rejected.
 
 ## License
 GPL-3.0-only, see [LICENSE](LICENSE). Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
