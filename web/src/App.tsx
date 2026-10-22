@@ -9,6 +9,7 @@ import { NodeDetail } from './components/NodeDetail';
 import { build, buildBoard, isBoard, parse, parseBoard, tabOf, type BoardFilter, type Sel, type Tab } from './route';
 import { Board } from './components/Board';
 import { Icon } from './components/Icon';
+import { attention } from './util';
 
 const notify = (msg: string) => {
   if (typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification(msg);
@@ -66,6 +67,18 @@ export function App() {
     return () => clearTimeout(t);
   }, [toast]);
   const list = [...corrals.values()];
+  const needs = list.reduce((n, c) => n + attention(c).count, 0);
+  useEffect(() => {
+    document.title = needs ? `(${needs}) Droverstatus` : 'Droverstatus';
+    const dot = needs ? "<circle cx='24' cy='8' r='8' fill='%23e5484d'/>" : '';
+    let link = document.querySelector<HTMLLinkElement>('link[rel=icon]');
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.append(link);
+    }
+    link.href = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='4' y='8' width='20' height='18' rx='3' fill='%23888'/>${dot}</svg>`;
+  }, [needs]);
   const current = selected ? corrals.get(selected) : undefined;
   return (
     <div className="shell">

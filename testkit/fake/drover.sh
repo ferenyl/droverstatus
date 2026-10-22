@@ -48,10 +48,17 @@ case "$cmd" in
       jq -e --arg i "$to" '.agents[$i]' "$R/$hid/registry.json" >/dev/null || { echo "unknown agent: $to" >&2; exit 1; }
       if [ "$(jq -r .state "$R/$hid/status/$to.json" 2>/dev/null)" = blocked ]; then
         echo "[drover-sh -> drover] queued for $to (blocked, needs input): $*. After it is unblocked: drover.sh flush $hid $to" >> "$R/$hid/inbox/drover.log"
+        mkdir -p "$R/$hid/queue"; printf '%s\t%s\n' "$from" "$*" >> "$R/$hid/queue/$to.txt"
         echo "$(now) $line (queued)" >> "$R/$hid/messages.log"; echo "queued for $to (blocked)" >&2; exit 0
       fi
     else echo "$line" >> "$R/$hid/inbox/drover.log"; fi
     echo "$(now) $line" >> "$R/$hid/messages.log" ;;
+  flush)
+    hid=$1; id=${@: -1}; q="$R/$hid/queue/$id.txt"
+    [ -s "$q" ] || { echo "nothing queued for $id" >&2; exit 1; }
+    [ "$(jq -r .state "$R/$hid/status/$id.json" 2>/dev/null)" != blocked ] || { echo "$id is still blocked" >&2; exit 1; }
+    rm -f "$q"; echo "flushed: $id" ;;
+  worktrees) [ ! -f "$R/$1/worktrees.txt" ] || cat "$R/$1/worktrees.txt" ;;
   revive)
     mod "$R/$1/registry.json" 'del(.closing_at) | del(.shutdown)'
     sess=$(jq -r .session "$R/$1/registry.json"); sed -i "s/ (EXITED.*//; /^$sess /!b" "$sessions"

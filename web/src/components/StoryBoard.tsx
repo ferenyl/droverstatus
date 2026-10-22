@@ -41,6 +41,7 @@ function StoryCard({ c, s, selected, onSelect }: { c: Corral; s: Story; selected
         {s.clarified && <span className="pill" title="clarified by user">clarified</span>}
       </span>
       <span className="tc-title">{s.title}</span>
+      {s.blocked && <span data-testid={`story-blocked-reason-${s.id}`} className="sc-summary">{s.blocked}</span>}
       {s.summary && <span className="sc-summary muted" title={s.summary}>{s.summary}</span>}
       <span className="tc-meta">
         {s.assignee && <span title="assignee">@{s.assignee}</span>}

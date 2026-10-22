@@ -48,8 +48,16 @@ export class DroverCli {
     return this.run(['kill', hid, '--force', id]);
   }
 
-  send(hid: string, msg: string) {
-    return this.run(['send', hid, 'drover', 'droverstatusui', msg]);
+  send(hid: string, msg: string, to = 'drover') {
+    return this.run(['send', hid, to, 'droverstatusui', msg]);
+  }
+
+  flush(hid: string, id: string) {
+    return this.run(['flush', hid, '--force', id]);
+  }
+
+  worktrees(hid: string) {
+    return this.run(['worktrees', hid], 30_000);
   }
 
   revive(hid: string) {

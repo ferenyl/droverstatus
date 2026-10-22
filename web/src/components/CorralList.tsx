@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { useEffect, useState } from 'react';
 import type { Corral } from '@droverstatus/shared';
-import { badge, counts, nodeState, type Node } from '../util';
+import { attention, badge, counts, nodeState, type Node } from '../util';
 import { Icon } from './Icon';
 
 export function StatusIcon({ state, id, decorative }: { state: string; id: string; decorative?: boolean }) {
@@ -69,6 +69,7 @@ export function CorralList(p: {
                   <b className="name">{c.slug}</b>
                   <code className="hid">{c.hid}</code>
                   <span data-testid={`badge-${c.hid}`} className={`pill pill-${badge(c)}`}>{badge(c)}</span>
+                  {attention(c).count > 0 && <span data-testid={`attention-${c.hid}`} className="pill pill-blocked" title={attention(c).reasons.join(', ')}>{attention(c).count}</span>}
                   {c.closing && !c.closed && <span data-testid={`closing-${c.hid}`} className="pill pill-blocked">closing…</span>}
                   <span data-testid={`counts-${c.hid}`} className="counts">
                     <i className="c-busy">{n.busy} busy</i> · <i className="c-idle">{n.idle} idle</i> · <i className="c-blocked">{n.blocked} blocked</i>

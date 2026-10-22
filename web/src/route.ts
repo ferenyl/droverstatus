@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import type { Node } from './util';
 
-export type Tab = 'overview' | 'board' | 'tasks' | 'messages' | 'reports' | 'screen';
+export type Tab = 'overview' | 'board' | 'tasks' | 'messages' | 'reports' | 'docs' | 'screen';
 /** story: `?story=<id>` filter of the corral board tab */
 export interface Sel { hid: string; node?: Node; tab?: Tab; story?: string }
 
-const TABS: Tab[] = ['overview', 'board', 'tasks', 'messages', 'reports', 'screen'];
+const TABS: Tab[] = ['overview', 'board', 'tasks', 'messages', 'reports', 'docs', 'screen'];
 const isTab = (s?: string): s is Tab => !!s && (TABS as string[]).includes(s);
 
-export const tabsFor = (node?: Node): Tab[] => TABS.filter((t) => t !== (node ? 'board' : 'screen'));
+export const tabsFor = (node?: Node): Tab[] => TABS.filter((t) => (node ? t !== 'board' && t !== 'docs' : t !== 'screen'));
 export const defaultTab = (node?: Node): Tab => (node?.kind === 'agent' ? 'screen' : 'overview');
 export const tabOf = (s: Sel): Tab => (s.tab && tabsFor(s.node).includes(s.tab) ? s.tab : defaultTab(s.node));
 

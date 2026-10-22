@@ -172,3 +172,10 @@ tr.attempts-high td { background: color-mix(in srgb, var(--bad) 8%, transparent)
 a.pill { text-decoration: none; }
 .ti-board { color: #db61a2; }
 .chip-dep { border: 1px solid var(--border); border-radius: 4px; padding: 0 .3rem; font-size: 11px; }
+
+.md-body { overflow-x: auto; line-height: 1.5; }
+.md-body pre { padding: .5rem; overflow-x: auto; }
+.md-body pre.mermaid { background: none; text-align: center; }
+.md-body table { border-collapse: collapse; }
+.md-body th, .md-body td { border: 1px solid var(--bs-border-color, #8884); padding: .2rem .5rem; }
+.md-body img, .md-body svg { max-width: 100%; height: auto; }

@@ -3,7 +3,7 @@ import { accessSync, constants, existsSync, readdirSync, readFileSync } from 'no
 import { homedir } from 'node:os';
 import { delimiter, dirname, join } from 'node:path';
 
-export const MIN_DROVER_VERSION = '0.9.0';
+export const MIN_DROVER_VERSION = '0.11.0';
 
 const executable = (f: string) => {
   try {

@@ -1,5 +1,5 @@
 [
 {"id":"scaffold","title":"Scaffold","acceptance":["builds"],"depends_on":[],"owner":"alpha","state":"done","attempts":1},
-{"id":"api","title":"API","acceptance":["tests green"],"depends_on":["scaffold"],"owner":"alpha","state":"in_progress","attempts":1},
+{"id":"api","title":"API","created_at":"2026-10-20T10:00:00Z","started_at":"2026-10-20T10:30:00Z","acceptance":["tests green"],"depends_on":["scaffold"],"owner":"alpha","state":"in_progress","attempts":1},
 {"id":"ui","title":"UI","acceptance":["renders","a11y"],"depends_on":["api"],"owner":"beta","state":"todo","attempts":0},
 {"id":"review","title":"Review","acceptance":[],"depends_on":["ui"],"owner":"gamma","state":"failed","attempts":2}]

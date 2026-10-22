@@ -18,7 +18,7 @@ const jres = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 const corral = (o: Partial<Corral> = {}): Corral => ({
   hid: 'aaaaaaaa', session: 's', project: '/p', slug: 'one', closed: false, liveness: 'alive',
-  drover: { status: { state: 'idle' } }, agents: [], tasks: [], stories: [], messages: [], inbox: [], reports: [], ...o,
+  drover: { status: { state: 'idle' } }, agents: [], tasks: [], stories: [], messages: [], messages_total: o.messages?.length ?? 0, messages_offset: 0, inbox: [], reports: [], report_meta: {}, docs: [], ...o,
 });
 const task = (id: string, state: string, o: Partial<Task> = {}): Task => ({ id, title: id.toUpperCase(), acceptance: [], depends_on: [], state, ...o });
 
@@ -217,12 +217,12 @@ describe('NodeDetail', () => {
     expect(screen.getByText(/No tasks owned by drover/)).not.toBeNull();
     expect(screen.getByTestId('tab-tasks').textContent).toContain('(0)');
   });
-  it('composer only on drover screen/messages, not agent screen', async () => {
+  it('composer on drover and agent screens', async () => {
     stubOk();
     const { rerender } = render(<NodeDetail corral={c} node={{ kind: 'drover' }} tab="screen" {...props} />);
     expect(screen.queryByTestId('message-input')).not.toBeNull();
     rerender(<NodeDetail corral={c} node={{ kind: 'agent', id: 'a1' }} tab="screen" {...props} />);
-    expect(screen.queryByTestId('message-input')).toBeNull();
+    expect(screen.getByLabelText('Message to a1')).toBeTruthy();
     await act(async () => {});
   });
   it('screen unavailable then retry recovers', async () => {
@@ -243,7 +243,7 @@ describe('NodeDetail', () => {
     fireEvent.click(screen.getByTestId('message-send'));
     await waitFor(() => expect(f).toHaveBeenCalled());
     expect(f.mock.calls[0][0]).toBe('/api/corrals/aaaaaaaa/messages');
-    expect(JSON.parse(f.mock.calls[0][1].body)).toEqual({ message: 'hello' });
+    expect(JSON.parse(f.mock.calls[0][1].body)).toEqual({ message: 'hello', to: 'drover' });
   });
 });
 

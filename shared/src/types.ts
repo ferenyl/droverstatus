@@ -9,6 +9,8 @@ export interface AgentStatus {
   transcript_path?: string;
   cwd?: string;
   at?: string;
+  /** when the current state began (drover >= 0.11); `at` is the last hook event */
+  since?: string;
 }
 
 export interface Agent {
@@ -21,6 +23,11 @@ export interface Agent {
   cwd?: string;
   worktree?: string | null;
   story?: string;
+  /** claude --resume <session_id> */
+  session_id?: string;
+  created?: string;
+  /** messages queued while the agent was blocked (queue/<id>.txt), delivered by flush */
+  queued?: number;
   status: AgentStatus;
 }
 
@@ -40,6 +47,26 @@ export interface Task {
   story?: string;
   /** plan | impl | review | pr; absent = impl */
   kind?: string;
+  created_at?: string;
+  started_at?: string;
+  finished_at?: string;
+}
+
+/** registered file (docs.json, or the corral's own brief.md/plan.md) */
+export interface DocEntry {
+  /** absolute */
+  path: string;
+  note: string;
+  agent?: string;
+  added_at?: string;
+}
+
+/** reports/<agent>.json written by `drover.sh report` (>= 0.11) */
+export interface ReportMeta {
+  task?: string;
+  status?: string;
+  summary?: string;
+  at?: string;
 }
 
 /** story statuses in board column order */
@@ -101,9 +128,20 @@ export interface Corral {
   tasks: Task[];
   stories: Story[];
   story_mode?: StoryMode;
+  /** last 200 only; older via GET /corrals/:hid/messages?before= */
   messages: Message[];
+  messages_total: number;
+  /** byte offset in messages.log where `messages` starts (0 = nothing older) */
+  messages_offset: number;
+  /** last 200 lines */
   inbox: string[];
+  /** newest first when report metadata exists */
   reports: string[];
+  report_meta: Record<string, ReportMeta>;
+  docs: DocEntry[];
+  /** registry.json contract fields (>= 0.11) */
+  schema?: number;
+  drover_version?: string;
 }
 
 export interface Worktree {

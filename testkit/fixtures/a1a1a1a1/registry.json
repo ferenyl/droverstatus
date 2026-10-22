@@ -1,4 +1,6 @@
 {
+  "schema": 1,
+  "drover_version": "0.11.0",
   "id": "a1a1a1a1",
   "session": "corral-live-a1a1a1a1",
   "project": "/tmp/fake-live",

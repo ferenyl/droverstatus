@@ -44,12 +44,12 @@ describe('drover.sh discovery', () => {
     chmodSync(f, 0o755);
     expect(findDroverSh(dir, home)).toBe(f);
   });
-  it('DROVER_SH must exist; warns when the plugin is older than 0.9.0', () => {
+  it('DROVER_SH must exist; warns when the plugin is older than 0.11.0', () => {
     expect(() => loadConfig({ DROVER_SH: join(home, 'nope') })).toThrow(/does not exist/);
     const old = plugin('0.8.0');
     expect(pluginVersion(old)).toBe('0.8.0');
     expect(loadConfig({ DROVER_SH: old }).warnings).toHaveLength(1);
-    expect(loadConfig({ DROVER_SH: plugin('0.10.0') }).warnings).toEqual([]);
+    expect(loadConfig({ DROVER_SH: plugin('0.11.0') }).warnings).toEqual([]);
     expect(loadConfig({ DROVER_SH: plugin('1.0.0', false) }).warnings).toEqual([]);
   });
 });

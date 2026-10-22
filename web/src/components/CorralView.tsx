@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+import { useState } from 'react';
 import type { Corral } from '@droverstatus/shared';
 import { api } from '../api';
 import { badge, counts, errMsg } from '../util';
@@ -7,6 +8,8 @@ import { AgentTable } from './AgentTable';
 import { TaskList } from './TaskList';
 import { CorralBoard } from './CorralBoard';
 import { MessageFeed } from './MessageFeed';
+import { Doc } from './Doc';
+import { Worktrees } from './Worktrees';
 import { Reports } from './Reports';
 import { PaneHeader } from './PaneHeader';
 import { Tabs } from './Tabs';
@@ -18,6 +21,8 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
   const attach = `zellij attach ${c.session}`;
   const act = (f: () => Promise<unknown>) => f().catch((e) => p.onError(errMsg(e)));
   const n = counts(c);
+  const [taskStory, setTaskStory] = useState('');
+  const shownTasks = taskStory ? c.tasks.filter((t) => t.story === taskStory) : c.tasks;
   return (
     <div data-testid="corral-view" className="pane-in">
       <PaneHeader
@@ -40,8 +45,9 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
           { id: 'overview', label: 'Overview' },
           { id: 'board', label: 'Board' },
           { id: 'tasks', label: `Tasks (${c.tasks.length})` },
-          { id: 'messages', label: `Messages (${c.messages.length})` },
+          { id: 'messages', label: `Messages (${c.messages_total})` },
           { id: 'reports', label: `Reports (${c.reports.length})` },
+          { id: 'docs', label: `Docs (${c.docs.length})` },
         ]}
       />
       <div className="tab-body" data-testid={`tabpanel-${tab}`}>
@@ -56,6 +62,7 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
                   <code data-testid="attach-cmd">{attach}</code>{' '}
                   <button className="btn btn-sm btn-outline theme-secondary" data-testid="copy-attach" onClick={() => navigator.clipboard?.writeText(attach)}><Icon n="copy" /> Copy</button>
                 </dd>
+                {c.drover_version && <><dt>plugin</dt><dd data-testid="drover-version" className="mono">{c.drover_version}{c.schema != null && ` · schema ${c.schema}`}</dd></>}
                 <dt>drover</dt><dd>{c.drover.model} <span data-testid="drover-state" className={`pill pill-${c.drover.status.state}`}><StateIcon state={c.drover.status.state} />{c.drover.status.state}</span></dd>
                 <dt>agents</dt><dd className="mono">{n.busy} busy · {n.idle} idle · {n.blocked} blocked</dd>
                 {c.story_mode && (
@@ -68,6 +75,8 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
                 )}
               </dl>
             </section>
+            <Doc title="Brief" testId="brief" load={() => api.brief(c.hid)} />
+            <Worktrees hid={c.hid} />
             <section className="card-x">
               <h3><Icon n="screen" /> Agents</h3>
               {c.agents.length === 0 ? <p className="empty-note">No agents yet</p> : (
@@ -77,9 +86,27 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
           </>
         )}
         {tab === 'board' && <CorralBoard corral={c} story={p.story} onStory={p.onStory ?? (() => {})} onOpen={(owner) => owner && p.onOpenAgent(owner)} />}
-        {tab === 'tasks' && <section className="card-x flush">{c.tasks.length === 0 ? <p className="empty-note p">No tasks</p> : <TaskList tasks={c.tasks} />}</section>}
+        {tab === 'tasks' && (
+          <section className="card-x flush">
+            {c.stories.length > 0 && (
+              <select className="form-select form-select-sm story-select" data-testid="tasks-story-filter" aria-label="Filter by story" value={taskStory} onChange={(e) => setTaskStory(e.target.value)}>
+                <option value="">All stories</option>
+                {c.stories.map((s) => <option key={s.id} value={s.id}>{s.id} — {s.title}</option>)}
+              </select>
+            )}
+            {c.tasks.length === 0 ? <p className="empty-note p">No tasks</p> : <TaskList tasks={shownTasks} all={c.tasks} />}
+          </section>
+        )}
         {tab === 'messages' && <MessageFeed corral={c} onError={p.onError} />}
-        {tab === 'reports' && <Reports hid={c.hid} ids={c.reports} />}
+        {tab === 'docs' && (
+          <section data-testid="docs" className="card-x">
+            {c.docs.length === 0 && <p className="empty-note">No docs yet</p>}
+            {c.docs.map((d) => (
+              <Doc key={d.path} testId={`doc-${d.note || d.path}`} title={`${d.note || d.path}${d.agent ? ` · ${d.agent}` : ''} — ${d.path}`} load={() => api.doc(c.hid, d.path)} markdown={/\.(md|markdown)$/i.test(d.path)} />
+            ))}
+          </section>
+        )}
+        {tab === 'reports' && <Reports hid={c.hid} ids={c.reports} meta={c.report_meta} />}
       </div>
     </div>
   );

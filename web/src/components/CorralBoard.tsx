@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import type { Corral } from '@droverstatus/shared';
 import { Lane } from './Board';
+import { api } from '../api';
+import { Doc } from './Doc';
 import { StoryBoard } from './StoryBoard';
 
 export function CorralBoard(p: { corral: Corral; story?: string; onStory: (id?: string) => void; onOpen: (owner?: string) => void }) {
@@ -18,6 +20,7 @@ export function CorralBoard(p: { corral: Corral; story?: string; onStory: (id?: 
               {c.stories.map((s) => <option key={s.id} value={s.id}>{s.id} — {s.title}</option>)}
             </select>
           </div>
+          {story && <Doc key={story} title={`Story ${story}`} testId="story-doc" load={() => api.story(c.hid, story)} />}
         </>
       )}
       <Lane c={c} tasks={tasks} onOpen={(_, owner) => p.onOpen(owner)} />

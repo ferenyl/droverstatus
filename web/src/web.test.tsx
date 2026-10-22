@@ -10,7 +10,7 @@ const corral = (hid: string): Corral => ({
   hid, session: 's', project: '/p', slug: 'x', closed: false, liveness: 'alive',
   drover: { status: { state: 'idle' } },
   agents: [{ id: 'a1', status: { state: 'blocked' } }],
-  tasks: [], stories: [], messages: [], inbox: [], reports: [],
+  tasks: [], stories: [], messages: [], messages_total: 0, messages_offset: 0, inbox: [], reports: [], report_meta: {}, docs: [],
 });
 
 describe('web', () => {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import type { ApiError, Corral, Model, ServerEvent } from '@droverstatus/shared';
+import type { ApiError, Corral, Message, Model, ServerEvent, Worktree } from '@droverstatus/shared';
 
 export class ApiFail extends Error {
   constructor(public body: ApiError, public status: number) {
@@ -26,10 +26,17 @@ export const api = {
   close: (hid: string, worktrees?: 'remove' | 'keep') =>
     call('DELETE', `${base(hid)}${worktrees ? `?worktrees=${worktrees}` : ''}`),
   revive: (hid: string) => call('POST', `${base(hid)}/revive`),
-  send: (hid: string, message: string) => call('POST', `${base(hid)}/messages`, { message }),
+  send: (hid: string, message: string, to?: string) => call('POST', `${base(hid)}/messages`, { message, to }),
+  flush: (hid: string, id: string) => call('POST', `${base(hid)}/agents/${id}/flush`),
   kill: (hid: string, id: string) => call('DELETE', `${base(hid)}/agents/${id}`),
   screen: (hid: string, id: string, lines = 40) =>
     call<{ screen: string }>('GET', `${base(hid)}/agents/${id}/screen?lines=${lines}`),
+  olderMessages: (hid: string, before: number) =>
+    call<{ messages: Message[]; offset: number }>('GET', `${base(hid)}/messages?before=${before}`),
+  story: (hid: string, id: string) => call<string>('GET', `${base(hid)}/stories/${encodeURIComponent(id)}`),
+  doc: (hid: string, path: string) => call<string>('GET', `${base(hid)}/doc?path=${encodeURIComponent(path)}`),
+  brief: (hid: string) => call<string>('GET', `${base(hid)}/brief`),
+  worktrees: (hid: string) => call<Worktree[]>('GET', `${base(hid)}/worktrees`),
   report: (hid: string, id: string) => call<string>('GET', `${base(hid)}/reports/${id}`),
 };
 

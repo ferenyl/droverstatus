@@ -24,7 +24,7 @@ const mockFetch = (...rs: Response[]) => {
 };
 const corral = (o: Partial<Corral> = {}): Corral => ({
   hid: 'aaaaaaaa', session: 's', project: '/p', slug: 'x', closed: false, liveness: 'alive',
-  drover: { status: { state: 'idle' } }, agents: [], tasks: [], stories: [], messages: [], inbox: [], reports: [], ...o,
+  drover: { status: { state: 'idle' } }, agents: [], tasks: [], stories: [], messages: [], messages_total: o.messages?.length ?? 0, messages_offset: 0, inbox: [], reports: [], report_meta: {}, docs: [], ...o,
 });
 
 afterEach(() => {
@@ -184,7 +184,7 @@ describe('node tabs', () => {
     expect(screen.queryByTestId('task-row-t2')).toBeNull();
     rerender(<NodeDetail corral={c} node={node} tab="messages" onTab={() => {}} onError={() => {}} />);
     expect(screen.getAllByTestId('message-item')).toHaveLength(1);
-    expect(screen.queryByTestId('message-input')).toBeNull();
+    expect(screen.getByLabelText('Message to a1')).toBeTruthy();
   });
   it('drover messages tab has composer', () => {
     render(<NodeDetail corral={c} node={{ kind: 'drover' }} tab="messages" onTab={() => {}} onError={() => {}} />);

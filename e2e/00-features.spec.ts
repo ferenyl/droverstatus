@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { expect, test } from '@playwright/test';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = process.env.DROVER_ROOT!;
@@ -175,6 +175,105 @@ test('queued message pill', async ({ page }) => {
   });
   await page.goto(`/corrals/${A}/agents/alpha/messages`);
   await expect(page.getByTestId('msg-queued')).toHaveCount(0);
+});
+
+test('composer sends to a worker agent', async ({ page }) => {
+  await page.goto(`/corrals/${A}/agents/alpha/messages`);
+  await page.getByTestId('message-input').fill('hi alpha');
+  await page.getByTestId('message-send').click();
+  await expect(page.getByTestId('message-item').filter({ hasText: 'hi alpha' })).toBeVisible();
+  expect(calls()).toMatch(new RegExp(`^\\S+ send ${A} alpha droverstatusui hi alpha$`, 'm'));
+});
+
+test('flush queued messages once the agent is unblocked', async ({ page }) => {
+  const q = join(root, A, 'queue');
+  mkdirSync(q, { recursive: true });
+  writeFileSync(join(q, 'alpha.txt'), 'droverstatusui\thold on\n');
+  try {
+    await page.goto(`/corrals/${A}/agents/alpha/overview`);
+    await page.getByTestId('agent-flush-alpha').click();
+    await expect(page.getByTestId('agent-flush-alpha')).toHaveCount(0);
+    expect(calls()).toMatch(new RegExp(`^\\S+ flush ${A} --force alpha$`, 'm'));
+  } finally { rmSync(q, { recursive: true, force: true }); }
+});
+
+test('detail: brief, worktrees, acceptance, story filter and body, agent fields', async ({ page }) => {
+  await page.goto(`/corrals/${A}`);
+  await page.getByTestId('brief').locator('summary').click();
+  await expect(page.getByTestId('brief-body')).toHaveText('Fixture brief');
+  await page.goto(`/corrals/${A}/tasks`);
+  await expect(page.getByTestId(`task-accept-ui`)).toContainText('a11y');
+  await page.goto(`/corrals/${D}`);
+  await expect(page.getByTestId('worktree-row')).toHaveCount(2);
+  await expect(page.getByTestId('worktrees')).toContainText('dirty');
+  const F = 'f6f6f6f6';
+  await page.goto(`/corrals/${F}/tasks`);
+  await expect(page.getByTestId('task-kind-123-plan')).toHaveText('plan');
+  await page.getByTestId('tasks-story-filter').selectOption('456');
+  await expect(page.getByTestId('task-row-123-plan')).toHaveCount(0);
+  await page.goto(`/corrals/${F}/board?story=123`);
+  await page.getByTestId('story-doc').locator('summary').click();
+  await expect(page.getByTestId('story-doc-body')).toContainText('Story 123 body');
+  await expect(page.getByTestId('story-blocked-reason-456')).toHaveText('waiting for API team');
+  await page.goto(`/corrals/${F}/agents/123-dev/overview`);
+  await expect(page.getByTestId('agent-worktree')).toHaveText('/tmp/fake-wt/123');
+  await expect(page.getByTestId('resume-cmd')).toHaveText('claude --resume sid-123');
+});
+
+test('contract fields: plugin version, report pills and order, task times, stuck, state since', async ({ page }) => {
+  await page.goto(`/corrals/${A}`);
+  await expect(page.getByTestId('drover-version')).toContainText('0.11.0 · schema 1');
+  await expect(page.getByTestId('agent-stuck-alpha')).toBeVisible();
+  await page.goto(`/corrals/${A}/reports`);
+  await expect(page.getByTestId('report-status-alpha')).toHaveText('done');
+  await expect(page.getByTestId('report-status-gamma')).toHaveText('failed');
+  await expect(page.getByTestId('report-new-alpha')).toBeVisible();
+  await expect(page.locator('[data-testid^="report-"][data-testid$="alpha"], [data-testid^="report-"][data-testid$="gamma"]').first()).toBeVisible();
+  await page.getByTestId('report-alpha').click();
+  await expect(page.getByTestId('report-new-alpha')).toHaveCount(0);
+  await page.goto(`/corrals/${A}/tasks`);
+  await expect(page.getByTestId('task-time-api')).toContainText('started');
+  await page.goto(`/corrals/${A}/agents/alpha/overview`);
+  await expect(page.getByTestId('state-since')).toBeVisible();
+  await expect(page.getByTestId('agent-stuck')).toBeVisible();
+  // old corral without the new fields renders unchanged
+  await page.goto(`/corrals/${B}`);
+  await expect(page.getByTestId('drover-version')).toHaveCount(0);
+});
+
+test('docs tab lists brief and registered docs; unregistered paths are refused', async ({ page, request }) => {
+  const spec = join(root, 'spec-e2e.md'), list = join(root, A, 'docs.json');
+  writeFileSync(spec, '# Spec body\n\n**bold** <script>window.__xss = 1</script><img src=x onerror="window.__xss = 2">\n\n```mermaid\ngraph TD; A-->B;\n```\n');
+  writeFileSync(list, JSON.stringify([{ path: spec, note: 'the spec', agent: 'alpha', added_at: '2026-10-22T10:00:00Z' }]));
+  try {
+    await page.goto(`/corrals/${A}/docs`);
+    await expect(page.getByTestId('tab-docs')).toContainText('(2)');
+    await page.getByTestId('doc-brief').locator('summary').click();
+    await expect(page.getByTestId('doc-brief-body')).toHaveText('Fixture brief');
+    await page.getByTestId('doc-the spec').locator('summary').click();
+    const body = page.getByTestId('doc-the spec-body');
+    await expect(body.locator('h1')).toHaveText('Spec body');
+    await expect(body.locator('strong')).toHaveText('bold');
+    await expect(body.locator('pre.mermaid svg')).toBeVisible(); // lazy-loaded mermaid rendered
+    await expect(body.locator('script')).toHaveCount(0);
+    expect(await page.evaluate(() => (window as unknown as { __xss?: number }).__xss)).toBeUndefined();
+    const bad = await request.get(`${process.env.E2E_API}/api/corrals/${A}/doc?path=/etc/passwd`);
+    expect(bad.status()).toBe(404);
+  } finally { rmSync(spec, { force: true }); rmSync(list, { force: true }); }
+});
+
+test('attention badge counts blocked, stuck, stories and queued; title shows the total', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId(`attention-${A}`)).toHaveText('2'); // beta blocked + alpha stuck
+  await expect(page.getByTestId('attention-f6f6f6f6')).toHaveText('2'); // busy agent stuck + story 456 blocked
+  await expect(page).toHaveTitle(/^\(\d+\) Droverstatus$/);
+  const q = join(root, A, 'queue');
+  mkdirSync(q, { recursive: true });
+  writeFileSync(join(q, 'alpha.txt'), 'droverstatusui\thold on\n');
+  try {
+    await expect(page.getByTestId(`attention-${A}`)).toHaveText('3');
+  } finally { rmSync(q, { recursive: true, force: true }); }
+  await expect(page.getByTestId(`attention-${A}`)).toHaveText('2');
 });
 
 test('closing pill in tree and corral view', async ({ page }) => {

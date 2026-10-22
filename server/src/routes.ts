@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { existsSync, statSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { HID_RE, KEBAB_RE, MODELS } from '@droverstatus/shared';
 import type { ApiError, Corral, ServerEvent } from '@droverstatus/shared';
 import type { CliResult, DroverCli } from './droverCli.js';
 import { parseWorktrees } from './droverCli.js';
+import { docsOf, parseMessages, tailLines } from './store.js';
 import type { Store } from './store.js';
 
 export interface Deps {
@@ -20,6 +21,7 @@ const cliFail = (reply: FastifyReply, r: CliResult) =>
   fail(reply, 500, { error: `drover.sh exited ${r.code}`, stderr: r.stderr, code: r.code });
 
 const MAX_TEXT = 100_000;
+const MAX_DOC = 1_000_000;
 
 export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps): void {
   const corralOr404 = (hid: string, reply: FastifyReply) => {
@@ -94,12 +96,31 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
     return r.ok ? { ok: true } : cliFail(reply, r);
   });
 
-  app.post<{ Params: { hid: string }; Body: { message?: string } }>('/api/corrals/:hid/messages', async (req, reply) => {
-    if (!corralOr404(req.params.hid, reply)) return;
+  app.post<{ Params: { hid: string }; Body: { message?: string; to?: string } }>('/api/corrals/:hid/messages', async (req, reply) => {
+    const c = corralOr404(req.params.hid, reply);
+    if (!c) return;
     const message = req.body?.message?.trim();
     if (!message || typeof message !== 'string' || message.length > MAX_TEXT) return fail(reply, 400, { error: 'message required' });
-    const r = await cli.send(req.params.hid, message);
+    const to = req.body?.to ?? 'drover';
+    if (to !== 'drover' && (typeof to !== 'string' || badId(to, reply) || !c.agents.some((a) => a.id === to))) return fail(reply, 404, { error: 'unknown agent' });
+    const r = await cli.send(c.hid, message, to);
     return r.ok ? { ok: true } : cliFail(reply, r);
+  });
+
+  app.post<{ Params: { hid: string; id: string } }>('/api/corrals/:hid/agents/:id/flush', async (req, reply) => {
+    const c = corralOr404(req.params.hid, reply);
+    if (!c || badId(req.params.id, reply)) return;
+    if (!c.agents.some((a) => a.id === req.params.id)) return fail(reply, 404, { error: 'unknown agent' });
+    const r = await cli.flush(c.hid, req.params.id);
+    return r.ok ? { ok: true } : cliFail(reply, r);
+  });
+
+  app.get<{ Params: { hid: string }; Querystring: { before?: string } }>('/api/corrals/:hid/messages', async (req, reply) => {
+    if (!corralOr404(req.params.hid, reply)) return;
+    const before = Number(req.query.before);
+    if (!Number.isInteger(before) || before < 0) return fail(reply, 400, { error: 'before must be a byte offset' });
+    const t = await tailLines(join(root, req.params.hid, 'messages.log'), 200, before);
+    return { messages: parseMessages(t.lines.join('\n')), offset: t.offset };
   });
 
   app.delete<{ Params: { hid: string; id: string } }>('/api/corrals/:hid/agents/:id', async (req, reply) => {
@@ -120,6 +141,43 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root }: Deps)
       return r.ok ? { screen: r.stdout } : cliFail(reply, r);
     },
   );
+
+  const md = async (file: string, reply: FastifyReply) => {
+    try {
+      const st = await stat(file);
+      if (!st.isFile()) return fail(reply, 404, { error: 'not found' });
+      if (st.size > MAX_DOC) return fail(reply, 413, { error: 'doc too large' });
+      return reply.type('text/markdown').header('x-content-type-options', 'nosniff').send(await readFile(file, 'utf8'));
+    } catch {
+      return fail(reply, 404, { error: 'not found' });
+    }
+  };
+
+  app.get<{ Params: { hid: string; id: string } }>('/api/corrals/:hid/stories/:id', async (req, reply) => {
+    if (!corralOr404(req.params.hid, reply)) return;
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(req.params.id)) return fail(reply, 400, { error: 'bad story id' });
+    return md(join(root, req.params.hid, 'stories', `${req.params.id}.md`), reply);
+  });
+
+  // only files registered for the corral can be read
+  app.get<{ Params: { hid: string }; Querystring: { path?: string } }>('/api/corrals/:hid/doc', async (req, reply) => {
+    if (!corralOr404(req.params.hid, reply)) return;
+    const path = req.query.path;
+    if (typeof path !== 'string' || !(await docsOf(join(root, req.params.hid))).some((d) => d.path === path)) return fail(reply, 404, { error: 'unknown doc' });
+    return md(path, reply);
+  });
+
+  app.get<{ Params: { hid: string } }>('/api/corrals/:hid/brief', async (req, reply) => {
+    if (!corralOr404(req.params.hid, reply)) return;
+    return md(join(root, req.params.hid, 'brief.md'), reply);
+  });
+
+  // on demand: runs git status per worktree
+  app.get<{ Params: { hid: string } }>('/api/corrals/:hid/worktrees', async (req, reply) => {
+    if (!corralOr404(req.params.hid, reply)) return;
+    const r = await cli.worktrees(req.params.hid);
+    return r.ok ? parseWorktrees(r.stdout) : cliFail(reply, r);
+  });
 
   app.get<{ Params: { hid: string; id: string } }>('/api/corrals/:hid/reports/:id', async (req, reply) => {
     if (!corralOr404(req.params.hid, reply) || badId(req.params.id, reply)) return;

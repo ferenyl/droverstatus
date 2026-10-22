@@ -27,6 +27,14 @@ export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187 }:
     // DNS-rebinding guard: the API can launch agents
     const host = (req.headers.host ?? '').replace(/:\d+$/, '');
     if (host !== '127.0.0.1' && host !== 'localhost' && host !== '[::1]') return reply.code(403).send({ error: 'bad host' });
+    // cross-site POST/DELETE guard; non-browser clients send no Origin
+    const origin = req.headers.origin;
+    if (origin && req.method !== 'GET' && req.method !== 'HEAD') {
+      // same origin as the Host (also through the Vite proxy) or the dev UI port
+      const o = /^https?:\/\/([^/]+)$/.exec(origin)?.[1];
+      const loopback = o && /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(o);
+      if (!loopback || (o !== req.headers.host && o.replace(/^.*:/, '') !== String(webPort))) return reply.code(403).send({ error: 'bad origin' });
+    }
   });
   app.setErrorHandler((err: FastifyError, _req, reply) => {
     const status = err.statusCode && err.statusCode < 500 ? err.statusCode : 500;
