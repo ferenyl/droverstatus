@@ -1,0 +1,14 @@
+{
+  "name": "droverstatus-lint",
+  "private": true,
+  "type": "module",
+  "description": "ESLint toolchain, kept separate because typescript-eslint does not support TypeScript 7 yet",
+  "license": "GPL-3.0-only",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0"
+  }
+}

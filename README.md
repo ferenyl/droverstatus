@@ -34,14 +34,37 @@ Open the URL it prints. Stop with Ctrl+C or Esc.
 
 To run it as a systemd user service that restarts on failure, see the example unit [docs/droverstatus.service](docs/droverstatus.service).
 
-## Environment
-| Var | Default |
-|---|---|
-| `DROVER_ROOT` | `~/.claude/drover` |
-| `DROVER_SH` | `drover.sh` from `PATH`, else the newest `~/.claude/plugins/cache/*/*/*/skills/drover/scripts/drover.sh`; the server refuses to start if none is found |
-| `ZELLIJ_BIN` | `zellij` |
-| `PORT` | `4177` (overridden by `--port`/`-p`) |
-| `WEB_PORT` | `5187`, dev only: Vite UI port (overridden by `--web-port`/`-w`) |
+## Configuration
+| Env var | Flag | Default | Purpose |
+|---|---|---|---|
+| `DROVER_ROOT` | | `~/.claude/drover` | Corral state directory. Set it if your Claude config lives elsewhere (`CLAUDE_CONFIG_DIR` is respected when no `DROVER_ROOT` is given) |
+| `DROVER_SH` | | `drover.sh` from `PATH`, else the newest `<claude config>/plugins/cache/*/*/*/skills/drover/scripts/drover.sh` | Path to `drover.sh`; the server refuses to start if none is found |
+| `ZELLIJ_BIN` | | `zellij` | Zellij binary |
+| `PORT` | `-p`, `--port` | `4177` (`4187` with `npm run dev`) | API/UI port |
+| `BIND_ADDR` | `--bind` | `127.0.0.1` | Listen address. Anything non-loopback exposes an unauthenticated API, see the warning below |
+| `DROVER_PROJECT_ROOTS` | | unset | Path-list (`:` on Linux) of directories; when set, `POST /api/corrals` only accepts a project `dir` inside one of them (symlinks resolved), otherwise 403 |
+| `CLAUDE_CONFIG_DIR` | | `~/.claude` | Claude config dir; the default for `DROVER_ROOT` and the `drover.sh` plugin-cache lookup |
+| `WEB_PORT` | `-w`, `--web-port` | `5187` | Dev only: Vite UI port |
+| `DROVER_DEV` | | unset | `1` = API only, UI served by the Vite dev server (set by `npm run dev`) |
+
+Flags win over env vars.
+
+Responses carry a strict `Content-Security-Policy` (`default-src 'self'`, no objects, no framing, `base-uri 'none'`), `X-Frame-Options: DENY` and `nosniff`; the UI must not need external resources.
+
+> **No authentication.** There is no login and no CSRF token. Anyone who can reach the port can launch, close and kill agents and send them messages, which is shell-level access to your account. The server prints a warning at every start (a stronger one when bound to a non-loopback address). Keep it on loopback and never forward or proxy the port. See [SECURITY.md](SECURITY.md).
+
+## Documentation
+- [docs/API.md](docs/API.md): HTTP routes, error shapes, SSE events
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): data flow and drover version policy
+- [docs/droverstatus.service](docs/droverstatus.service): hardened systemd user unit
+
+## Development
+```
+npm run lint        # eslint (toolchain in lint/, separate because typescript-eslint lacks TypeScript 7 support)
+npm run typecheck
+npm test
+```
+`npm start` rebuilds the web UI when `web/src`, `web/index.html` or `shared/src` are newer than `web/dist`. Node version: see `.nvmrc` (engines are enforced via `.npmrc`).
 
 ## Tests
 ```
@@ -59,7 +82,7 @@ While it runs, in `$DROVER_ROOT`:
 - `.zellij-sessions` – edit to flip liveness (`(EXITED` = dead)
 
 ## Security
-See [SECURITY.md](SECURITY.md). The server binds to 127.0.0.1 only and rejects other `Host` headers. It can launch and stop agents, so do not expose it (no port forwarding or reverse proxy).
+See [SECURITY.md](SECURITY.md). By default the server binds to 127.0.0.1 and rejects other `Host` headers. It has no authentication and can launch and stop agents, so do not expose it (no port forwarding, reverse proxy or non-loopback `--bind`).
 
 ## License
 GPL-3.0-only, see [LICENSE](LICENSE). Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

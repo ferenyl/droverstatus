@@ -18,7 +18,8 @@
     "dev": "bash scripts/dev.sh",
     "build": "npm run build -w web",
     "build:dist": "npm run build && node scripts/build-dist.mjs",
-    "start": "[ -d web/dist ] || npm run build; npm start -w server",
+    "start": "[ -f web/dist/index.html ] && [ -z \"$(find web/src web/index.html shared/src -newer web/dist/index.html -print -quit)\" ] || npm run build; npm start -w server",
+    "lint": "test -x lint/node_modules/.bin/eslint || npm ci --prefix lint --no-audit --no-fund --silent; lint/node_modules/.bin/eslint -c lint/eslint.config.js .",
     "test": "vitest run && npm test -w web",
     "typecheck": "tsc -b server web shared",
     "test:e2e": "bash testkit/e2e.sh"

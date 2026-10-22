@@ -19,6 +19,20 @@ Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
 ExecStart=%h/.local/bin/droverstatus
 Restart=on-failure
 RestartSec=5
+# Hardening. Agents started through drover.sh run inside this unit's sandbox and need to write to
+# your projects, drover state and zellij sockets, so only /usr, /boot and /etc are made read-only
+# (ProtectSystem=full). Use ProtectSystem=strict + ReadWritePaths= only if you list every project dir.
+# NOTE: NoNewPrivileges and ProtectSystem are inherited by everything started from here (zellij and
+# the agents), so sudo/setuid tools and writes to /usr, /boot and /etc fail inside agents. They are
+# opt-in: uncomment if you accept that.
+#NoNewPrivileges=yes
+#ProtectSystem=full
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
 
 [Install]
 WantedBy=default.target
