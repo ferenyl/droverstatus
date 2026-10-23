@@ -12,6 +12,9 @@ export interface CliResult {
   stderr: string;
 }
 
+// passed to detached runs; everything else comes from the user manager
+const FORWARD_ENV = ['PATH', 'DROVER_ROOT', 'CLAUDE_CONFIG_DIR'];
+
 export class DroverCli {
   /**
    * detached: run mutations as a transient service of the systemd user manager, in their own scope, so corrals
@@ -22,7 +25,7 @@ export class DroverCli {
   run(args: string[], timeout = this.timeoutMs, detach = false): Promise<CliResult> {
     const [file, argv] =
       detach && this.detached
-        ? ['systemd-run', ['--user', '--pipe', '--wait', '--quiet', '--collect', '-E', 'PATH', 'systemd-run', '--user', '--scope', '--quiet', '--collect', this.bin, ...args]]
+        ? ['systemd-run', ['--user', '--pipe', '--wait', '--quiet', '--collect', ...FORWARD_ENV.filter((k) => process.env[k] !== undefined).flatMap((k) => ['-E', k]), 'systemd-run', '--user', '--scope', '--quiet', '--collect', this.bin, ...args]]
         : [this.bin, args];
     return new Promise((resolve) => {
       execFile(file, argv, { timeout, maxBuffer: 4 << 20 }, (err, stdout, stderr) => {
