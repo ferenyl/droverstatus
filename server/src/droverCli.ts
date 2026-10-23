@@ -13,11 +13,19 @@ export interface CliResult {
 }
 
 export class DroverCli {
-  constructor(private bin: string, private timeoutMs = 30_000) {}
+  /**
+   * detached: run mutations as a transient service of the systemd user manager, in their own scope, so corrals
+   * share no process tree, cgroup, sandbox or environment with droverstatus and survive it being stopped or removed
+   */
+  constructor(private bin: string, private timeoutMs = 30_000, private detached = false) {}
 
-  run(args: string[], timeout = this.timeoutMs): Promise<CliResult> {
+  run(args: string[], timeout = this.timeoutMs, detach = false): Promise<CliResult> {
+    const [file, argv] =
+      detach && this.detached
+        ? ['systemd-run', ['--user', '--pipe', '--wait', '--quiet', '--collect', '-E', 'PATH', 'systemd-run', '--user', '--scope', '--quiet', '--collect', this.bin, ...args]]
+        : [this.bin, args];
     return new Promise((resolve) => {
-      execFile(this.bin, args, { timeout, maxBuffer: 4 << 20 }, (err, stdout, stderr) => {
+      execFile(file, argv, { timeout, maxBuffer: 4 << 20 }, (err, stdout, stderr) => {
         const e = err as (NodeJS.ErrnoException & { code?: number | string; killed?: boolean }) | null;
         const code = !e ? 0 : typeof e.code === 'number' ? e.code : 1;
         const extra = !e || typeof e.code === 'number' ? '' : e.killed ? 'timeout' : `${e.code ?? 'error'}: ${e.message}`;
@@ -31,7 +39,7 @@ export class DroverCli {
     try {
       const file = join(tmp, 'brief.md');
       await writeFile(file, brief);
-      const r = await this.run(['new', slug, dir, '--model', model, '--brief', file], 120_000);
+      const r = await this.run(['new', slug, dir, '--model', model, '--brief', file], 120_000, true);
       return { ...r, hid: /^HID=([0-9a-f]{8})$/m.exec(r.stdout)?.[1] };
     } finally {
       await rm(tmp, { recursive: true, force: true });
@@ -41,19 +49,19 @@ export class DroverCli {
   close(hid: string, worktrees?: 'remove' | 'keep') {
     const flag = worktrees === 'remove' ? ['--remove-worktrees'] : worktrees === 'keep' ? ['--keep-worktrees'] : [];
     // close waits up to 60s for the session to shut down
-    return this.run(['close', hid, ...flag], 90_000);
+    return this.run(['close', hid, ...flag], 90_000, true);
   }
 
   kill(hid: string, id: string) {
-    return this.run(['kill', hid, '--force', id]);
+    return this.run(['kill', hid, '--force', id], undefined, true);
   }
 
   send(hid: string, msg: string, to = 'drover') {
-    return this.run(['send', hid, to, 'droverstatusui', msg]);
+    return this.run(['send', hid, to, 'droverstatusui', msg], undefined, true);
   }
 
   flush(hid: string, id: string) {
-    return this.run(['flush', hid, '--force', id]);
+    return this.run(['flush', hid, '--force', id], undefined, true);
   }
 
   worktrees(hid: string) {
@@ -61,7 +69,7 @@ export class DroverCli {
   }
 
   revive(hid: string) {
-    return this.run(['revive', hid], 120_000);
+    return this.run(['revive', hid], 120_000, true);
   }
 
   read(hid: string, id: string, lines = 40) {

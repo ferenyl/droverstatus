@@ -100,5 +100,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, home = homedir(
     }),
     host: env.BIND_ADDR || '127.0.0.1',
     dev: env.DROVER_DEV === '1',
+    // corrals are started through the systemd user manager when it is reachable (DROVER_DETACH=0 opts out)
+    detached: env.DROVER_DETACH !== '0' && !!env.XDG_RUNTIME_DIR && existsSync(join(env.XDG_RUNTIME_DIR, 'systemd', 'private')),
   };
 }

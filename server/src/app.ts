@@ -19,9 +19,10 @@ export interface AppOpts {
   webPort?: number;
   host?: string;
   projectRoots?: string[];
+  detached?: boolean;
 }
 
-export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, host: bind = '127.0.0.1', projectRoots }: AppOpts) {
+export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, host: bind = '127.0.0.1', projectRoots, detached }: AppOpts) {
   const store = new Store(root);
   await store.scan();
   const app = Fastify({ bodyLimit: 256 * 1024, forceCloseConnections: true });
@@ -53,7 +54,7 @@ export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, h
     const status = err.statusCode && err.statusCode < 500 ? err.statusCode : 500;
     reply.code(status).send({ error: status === 500 ? 'internal error' : err.message });
   });
-  registerRoutes(app, { store, cli: new DroverCli(droverSh), root, projectRoots });
+  registerRoutes(app, { store, cli: new DroverCli(droverSh, undefined, detached), root, projectRoots });
   if (dev) {
     app.setNotFoundHandler((_req, reply) => reply.code(404).send({ error: `not found (dev: API only, the UI is on the Vite dev server http://127.0.0.1:${webPort})` }));
     return { app, store };
