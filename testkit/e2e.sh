@@ -12,7 +12,7 @@ export npm_config_cache=${npm_config_cache:-$HOME/.npm}
 mkdir -p "$tmp/home/.claude" "$tmp/data"
 cp -a "$here/fixtures/." "$tmp/data/"
 export HOME=$tmp/home CLAUDE_CONFIG_DIR=$tmp/home/.claude XDG_CONFIG_HOME=$tmp/home/.config XDG_CACHE_HOME=$tmp/home/.cache XDG_DATA_HOME=$tmp/home/.local/share
-export DROVER_ROOT=$tmp/data DROVER_SH=$here/fake/drover.sh ZELLIJ_BIN=$here/fake/zellij
+export DROVER_ROOT=$tmp/data DROVER_SH=$here/fake/drover.sh ZELLIJ_BIN=$here/fake/zellij DROVER_DETACH=0
 export PORT=${E2E_API_PORT:-4178} WEB_PORT=${E2E_WEB_PORT:-5178}
 export E2E_API=http://127.0.0.1:$PORT E2E_URL=http://127.0.0.1:$WEB_PORT DROVER_CALLS=$tmp/data/.calls.log
 pids=()
