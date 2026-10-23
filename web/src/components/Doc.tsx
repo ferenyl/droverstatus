@@ -8,7 +8,11 @@ export function Doc({ title, load, testId, markdown = true, onArtifact }: { titl
   return (
     <details className="card-x" data-testid={testId} onToggle={(e) => e.currentTarget.open && text === undefined && load().then(setText, () => setText('(not available)'))}>
       <summary>{title}</summary>
-      {onArtifact && <button className="btn btn-sm btn-primary d-flex ms-auto my-2" data-testid={`${testId}-artifact`} onClick={onArtifact}>Create Claude artifact</button>}
+      {onArtifact && (
+        <div className="d-flex justify-content-end my-2">
+          <button className="btn btn-sm btn-solid theme-primary" data-testid={`${testId}-artifact`} onClick={onArtifact}>Create Claude artifact</button>
+        </div>
+      )}
       {text !== undefined && (markdown ? <Markdown md={text} testId={`${testId}-body`} /> : <pre data-testid={`${testId}-body`} className="md">{text}</pre>)}
     </details>
   );
