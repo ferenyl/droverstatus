@@ -2,7 +2,7 @@
 import { isIP } from 'node:net';
 import { parseArgs } from 'node:util';
 import { buildApp } from './app.js';
-import { loadConfig } from './config.js';
+import { loadConfig, parseOrigins } from './config.js';
 import { startLiveness } from './liveness.js';
 import { startWatcher } from './watcher.js';
 
@@ -11,7 +11,7 @@ process.title = 'droverstatus';
 let config: ReturnType<typeof loadConfig>;
 try {
   config = loadConfig();
-  const { values } = parseArgs({ options: { port: { type: 'string', short: 'p' }, 'web-port': { type: 'string', short: 'w' }, bind: { type: 'string' } } });
+  const { values } = parseArgs({ options: { port: { type: 'string', short: 'p' }, 'web-port': { type: 'string', short: 'w' }, bind: { type: 'string' }, 'allowed-origins': { type: 'string' } } });
   const toPort = (v: string) => {
     const n = Number(v);
     if (!Number.isInteger(n) || n < 1 || n > 65535) throw new Error(`invalid port: ${v}`);
@@ -21,6 +21,7 @@ try {
   if (isIP(config.host) === 0) throw new Error(`invalid bind address (IP expected): ${config.host}`);
   if (values.port !== undefined) config.port = toPort(values.port);
   if (values['web-port'] !== undefined) config.webPort = toPort(values['web-port']);
+  if (values['allowed-origins'] !== undefined) config.allowedOrigins = parseOrigins(values['allowed-origins']);
 } catch (e) {
   console.error(`droverstatus: ${(e as Error).message}`);
   process.exit(1);

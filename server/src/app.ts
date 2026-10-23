@@ -20,9 +20,10 @@ export interface AppOpts {
   host?: string;
   projectRoots?: string[];
   detached?: boolean;
+  allowedOrigins?: string[];
 }
 
-export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, host: bind = '127.0.0.1', projectRoots, detached }: AppOpts) {
+export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, host: bind = '127.0.0.1', projectRoots, detached, allowedOrigins = [] }: AppOpts) {
   const store = new Store(root);
   await store.scan();
   const app = Fastify({ bodyLimit: 256 * 1024, forceCloseConnections: true });
@@ -32,13 +33,15 @@ export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, h
   // loopback names, the bound IP, and (wildcard bind) any IP literal; never other hostnames
   const allowedHost = (h: string) =>
     LOOPBACK.has(h) || h === bound || (wildcard && /^(\d{1,3}(\.\d{1,3}){3}|\[[0-9a-f:.]+\])$/i.test(h));
+  const origins = new Set(allowedOrigins);
+  const originHosts = new Set(allowedOrigins.map((o) => new URL(o).host));
   app.addHook('onRequest', async (req, reply) => {
     // DNS-rebinding guard: the API can launch agents
     const host = (req.headers.host ?? '').replace(/:\d+$/, '');
-    if (!allowedHost(host)) return reply.code(403).send({ error: 'bad host' });
+    if (!allowedHost(host) && !originHosts.has(req.headers.host ?? '')) return reply.code(403).send({ error: 'bad host' });
     // cross-site POST/DELETE guard; non-browser clients send no Origin
     const origin = req.headers.origin;
-    if (origin && req.method !== 'GET' && req.method !== 'HEAD') {
+    if (origin && !origins.has(origin) && req.method !== 'GET' && req.method !== 'HEAD') {
       // same origin as the Host (also through the Vite proxy) or the dev UI port
       const o = /^https?:\/\/([^/]+)$/.exec(origin)?.[1];
       const oh = o?.replace(/:\d+$/, '') ?? '';

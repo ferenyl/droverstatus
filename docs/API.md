@@ -1,6 +1,6 @@
 # API reference
 
-JSON over HTTP on the server port. Mutating requests (`POST`/`DELETE`) from a browser must carry an `Origin` matching the request `Host`; every request must carry a `Host` of loopback, the bound IP (or any IP literal on a wildcard bind). There is no authentication, see [SECURITY.md](../SECURITY.md). Types live in `shared/src/types.ts`.
+JSON over HTTP on the server port. Mutating requests (`POST`/`DELETE`) from a browser must carry an `Origin` matching the request `Host` or listed in `ALLOWED_ORIGINS`; every request must carry a `Host` of loopback, the bound IP (or any IP literal on a wildcard bind) or an `ALLOWED_ORIGINS` host. There is no authentication, see [SECURITY.md](../SECURITY.md). Types live in `shared/src/types.ts`.
 
 - `hid`: 8 hex chars. Agent `id`: kebab-case.
 - Errors are `ApiError`: `{ error, stderr?, code?, worktrees? }` with a 4xx/5xx status. A failing `drover.sh` call gives 500 with `stderr` and its exit `code`.

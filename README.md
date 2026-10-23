@@ -43,6 +43,7 @@ To run it as a systemd user service that restarts on failure, see the example un
 | `ZELLIJ_BIN` | | `zellij` | Zellij binary |
 | `PORT` | `-p`, `--port` | `4177` (`4187` with `npm run dev`) | API/UI port |
 | `BIND_ADDR` | `--bind` | `127.0.0.1` | Listen address. Anything non-loopback exposes an unauthenticated API, see the warning below |
+| `ALLOWED_ORIGINS` | `--allowed-origins` | unset | Comma-separated extra origins (`https://drover.lan,http://box:8080`), e.g. behind a reverse proxy; each is accepted as `Origin` and its host[:port] as `Host` |
 | `DROVER_PROJECT_ROOTS` | | unset | Path-list (`:` on Linux) of directories; when set, `POST /api/corrals` only accepts a project `dir` inside one of them (symlinks resolved), otherwise 403 |
 | `CLAUDE_CONFIG_DIR` | | `~/.claude` | Claude config dir; the default for `DROVER_ROOT` and the `drover.sh` plugin-cache lookup |
 | `WEB_PORT` | `-w`, `--web-port` | `5187` | Dev only: Vite UI port |
@@ -83,7 +84,7 @@ While it runs, in `$DROVER_ROOT`:
 - `.zellij-sessions` – edit to flip liveness (`(EXITED` = dead)
 
 ## Security
-See [SECURITY.md](SECURITY.md). By default the server binds to 127.0.0.1. `--bind <ip>` (or `BIND_ADDR`) listens elsewhere, with a warning at startup. There is no authentication or CSRF protection: anyone who can reach the port can launch and stop agents. Only bind to trusted networks, at your own risk. `Host` headers other than loopback and the bound IP are rejected.
+See [SECURITY.md](SECURITY.md). By default the server binds to 127.0.0.1. `--bind <ip>` (or `BIND_ADDR`) listens elsewhere, with a warning at startup. There is no authentication or CSRF protection: anyone who can reach the port can launch and stop agents. Only bind to trusted networks, at your own risk. `Host` headers other than loopback, the bound IP and `ALLOWED_ORIGINS` hosts are rejected.
 
 ## License
 GPL-3.0-only, see [LICENSE](LICENSE). Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
