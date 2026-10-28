@@ -187,12 +187,15 @@ async function reports(dir: string): Promise<{ reports: string[]; report_meta: R
 /** docs.json (drover >= 0.11) plus the corral's brief.md/plan.md when present */
 export async function docsOf(dir: string): Promise<DocEntry[]> {
   const out: DocEntry[] = [];
-  for (const f of ['brief.md', 'plan.md']) if (await stamp(join(dir, f))) out.push({ path: join(dir, f), note: f.slice(0, -3) });
+  for (const f of ['brief.md', 'plan.md']) {
+    const s = await stamp(join(dir, f));
+    if (s) out.push({ path: join(dir, f), note: f.slice(0, -3), stamp: s });
+  }
   const list = await json<Partial<DocEntry>[]>(join(dir, 'docs.json'));
   if (Array.isArray(list))
     for (const d of list)
       if (d && typeof d.path === 'string' && d.path.startsWith('/'))
-        out.push({ path: d.path, note: String(d.note ?? ''), agent: d.agent ? String(d.agent) : undefined, added_at: d.added_at });
+        out.push({ path: d.path, note: String(d.note ?? ''), agent: d.agent ? String(d.agent) : undefined, added_at: d.added_at, stamp: await stamp(d.path) });
   return out;
 }
 

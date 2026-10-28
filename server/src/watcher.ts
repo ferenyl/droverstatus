@@ -10,15 +10,24 @@ const relevant = /^(registry\.json|docs\.json|brief\.md|plan\.md|tasks\.json|sto
 
 export function startWatcher(root: string, store: Store, debounceMs = 150): () => Promise<void> {
   const timers = new Map<string, NodeJS.Timeout>();
+  // registered docs live anywhere on disk: watch them too and map them back to their corral
+  const docs = new Map<string, string>();
+  const track = (hid: string) => {
+    for (const d of store.get(hid)?.docs ?? [])
+      if (!docs.has(d.path) && relative(root, d.path).startsWith('..')) {
+        docs.set(d.path, hid);
+        w?.add(d.path);
+      }
+  };
   const queue = (path: string) => {
-    const hid = relative(root, path).split(sep)[0];
+    const hid = docs.get(path) ?? relative(root, path).split(sep)[0];
     if (!HID_RE.test(hid)) return;
     clearTimeout(timers.get(hid));
     timers.set(
       hid,
       setTimeout(() => {
         timers.delete(hid);
-        void store.refresh(hid);
+        void store.refresh(hid).then(() => track(hid));
       }, debounceMs),
     );
   };
@@ -35,6 +44,7 @@ export function startWatcher(root: string, store: Store, debounceMs = 150): () =
       depth: 3,
       ignoreInitial: true,
       ignored: (p) => {
+        if (docs.has(p)) return false;
         if (noise.test(p)) return true;
         const parts = relative(root, p).split(sep);
         // [''] = root, [hid] = corral dir; below that only the files the store reads
@@ -48,6 +58,7 @@ export function startWatcher(root: string, store: Store, debounceMs = 150): () =
       void cur.close().finally(() => !stopped && (retry = setTimeout(start, 5000)));
     });
     cur.on('all', (_ev, p) => queue(p));
+    store.list().forEach((c) => track(c.hid));
     // later starts (root appeared, watcher restarted) may have missed changes
     if (!first) void store.scan().then(() => store.list().forEach((c) => store.emit('updated', c.hid, c)));
     first = false;

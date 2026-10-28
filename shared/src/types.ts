@@ -59,6 +59,8 @@ export interface DocEntry {
   note: string;
   agent?: string;
   added_at?: string;
+  /** mtime:size of the file, changes when its content does */
+  stamp?: string;
 }
 
 /** reports/<agent>.json written by `drover.sh report` (>= 0.11) */

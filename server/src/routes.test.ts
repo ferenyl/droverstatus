@@ -147,6 +147,24 @@ describe('watcher', () => {
     await stop();
     expect(seen).toEqual(['after']);
   });
+
+  it('refreshes the corral when a registered doc outside the root changes', async () => {
+    const root = join(tmp, 'watchdoc');
+    const doc = join(tmp, 'outside-doc.md');
+    writeFileSync(doc, 'one');
+    corral(root, 'f0f0f0f0', { session: 's', slug: 'd' });
+    writeFileSync(join(root, 'f0f0f0f0', 'docs.json'), JSON.stringify([{ path: doc }]));
+    const store = new Store(root);
+    await store.scan();
+    const stamps: (string | undefined)[] = [];
+    store.on('updated', (_h, c) => stamps.push(c.docs[0]?.stamp));
+    const stop = startWatcher(root, store, 50);
+    await new Promise((r) => setTimeout(r, 300));
+    writeFileSync(doc, 'two!');
+    await new Promise((r) => setTimeout(r, 1000));
+    await stop();
+    expect(stamps).toHaveLength(1);
+  });
 });
 
 describe('SSE', () => {
