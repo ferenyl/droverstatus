@@ -162,5 +162,24 @@ export interface ApiError {
   worktrees?: Worktree[];
 }
 
+/** GET /api/auth/session */
+export interface AuthSession {
+  authenticated: boolean;
+  passwordSet: boolean;
+}
+
+/** POST /api/auth/login: password once set, otherwise the bootstrap token */
+export interface LoginBody {
+  password?: string;
+  token?: string;
+}
+
+/** POST /api/auth/password: current password, or the bootstrap token while none is set */
+export interface PasswordBody {
+  current?: string;
+  token?: string;
+  password: string;
+}
+
 export const HID_RE = /^[0-9a-f]{8}$/;
 export const KEBAB_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
