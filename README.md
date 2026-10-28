@@ -107,7 +107,16 @@ Use HTTPS in front of droverstatus. Browsers do not send `Secure` cookies over p
    `--trust-proxy 1` trusts any client, which is only safe if nothing else can reach the port.
 3. In NPM, add a Proxy Host for `drover.example.com` pointing at `192.168.1.5:4177`, with **Force SSL** enabled. NPM forwards `Host` and sets `X-Forwarded-Proto`, which is what enables the `__Host-` and `Secure` cookie flags.
 4. `--allowed-origins` must list the public URL: the browser sends that `Origin`, and the Host guard needs that host.
-5. In the proxy host's **Advanced** tab, add `proxy_buffering off;` so live updates are not held back.
+5. In the proxy host's **Advanced** tab, disable buffering for the event stream so live updates are not held back. The server already sends `X-Accel-Buffering: no` on `/api/events`; if corrals still show up late after a reload, add:
+   ```nginx
+   location /api/events {
+       proxy_pass $forward_scheme://$server:$port;
+       proxy_buffering off;
+       proxy_cache off;
+       proxy_read_timeout 1h;
+   }
+   ```
+   Also enable **HTTP/2 Support** on the SSL tab. Over HTTP/1.1, browsers allow only 6 connections per host, and each open tab holds one event stream.
 6. Optional: an NPM **Access List** (basic auth) in front adds a second login for internet exposure.
 
 Without `--trust-proxy`, forwarded headers are ignored: the login limiter counts the proxy's IP as the client, and cookies are not marked `Secure`.
@@ -115,18 +124,6 @@ Without `--trust-proxy`, forwarded headers are ignored: the login limiter counts
 > **Set a password right after the first start.** Until one is set, the bootstrap token is full access, and anyone who can read it (the runtime file, or the terminal output) can log in. Keep the port off the internet, and never forward it without HTTPS.
 
 See [SECURITY.md](SECURITY.md) for the threat model and [docs/API.md](docs/API.md) for the auth endpoints.
-
-### Reverse proxy (Nginx Proxy Manager)
-Add the proxy's origin to `ALLOWED_ORIGINS`. The server sends `X-Accel-Buffering: no` on `/api/events`, but if corrals still show up late after a reload, disable buffering for the event stream in the proxy host's **Advanced** tab:
-```nginx
-location /api/events {
-    proxy_pass $forward_scheme://$server:$port;
-    proxy_buffering off;
-    proxy_cache off;
-    proxy_read_timeout 1h;
-}
-```
-Enable **HTTP/2 Support** on the SSL tab. Over HTTP/1.1, browsers allow only 6 connections per host, and each open tab holds one event stream.
 
 ## Documentation
 - [docs/API.md](docs/API.md): HTTP routes, auth endpoints, error shapes, SSE events
