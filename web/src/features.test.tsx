@@ -319,10 +319,12 @@ describe('App navigation', () => {
   });
   const c2 = corral({ hid: 'bbbbbbbb', slug: 'two', closed: true });
   const start = async (url: string) => {
+    emit = undefined as unknown as typeof emit;
     history.replaceState(null, '', url);
     vi.stubGlobal('EventSource', FakeES);
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jres(200, { screen: 's' })));
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async (u: string) => (u === '/api/auth/session' ? jres(200, { authenticated: true, passwordSet: true }) : jres(200, { screen: 's' }))));
     render(<App />);
+    await waitFor(() => expect(emit).toBeDefined());
     await act(async () => { emit('snapshot', { type: 'snapshot', corrals: [c1, c2] }); });
   };
   beforeEach(() => history.replaceState(null, '', '/'));
@@ -394,5 +396,96 @@ describe('App navigation', () => {
     await waitFor(() => expect(screen.getByTestId('conn-status').textContent).toContain('online'));
     await act(async () => { emit('corral-updated', { type: 'corral-updated', hid: 'aaaaaaaa', corral: { ...c1, closing: true } }); });
     expect(screen.getByTestId('corral-closing')).not.toBeNull();
+  });
+});
+
+describe('App auth', () => {
+  class QuietES {
+    static made = 0;
+    onopen: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    constructor() { QuietES.made++; }
+    addEventListener() {}
+    close() {}
+  }
+  const route = (session: unknown, extra: (u: string, init?: RequestInit) => Response | undefined = () => undefined) =>
+    vi.fn().mockImplementation(async (u: string, init?: RequestInit) => extra(u, init) ?? (u === '/api/auth/session' ? jres(200, session) : jres(200, {})));
+  beforeEach(() => { QuietES.made = 0; vi.stubGlobal('EventSource', QuietES); history.replaceState(null, '', '/'); });
+
+  it('logged out shows login and opens no EventSource', async () => {
+    vi.stubGlobal('fetch', route({ authenticated: false, passwordSet: true }));
+    render(<App />);
+    await screen.findByTestId('login');
+    expect(QuietES.made).toBe(0);
+  });
+  it('reads and clears #token=, then logs in', async () => {
+    const f = route({ authenticated: false, passwordSet: false }, (u) => (u === '/api/auth/login' ? new Response(null, { status: 204 }) : undefined));
+    vi.stubGlobal('fetch', f);
+    history.replaceState(null, '', '/login#token=abc');
+    render(<App />);
+    await waitFor(() => expect(f).toHaveBeenCalledWith('/api/auth/login', expect.objectContaining({ body: JSON.stringify({ token: 'abc' }) })));
+    expect(location.hash).toBe('');
+  });
+  it('shows 401 and 429 errors on login', async () => {
+    let status = 401;
+    vi.stubGlobal('fetch', route({ authenticated: false, passwordSet: true }, (u) => (u === '/api/auth/login' ? jres(status, { error: 'x' }) : undefined)));
+    render(<App />);
+    fireEvent.change(await screen.findByTestId('login-secret'), { target: { value: 'pw' } });
+    fireEvent.click(screen.getByTestId('login-submit'));
+    expect((await screen.findByTestId('login-error')).textContent).toContain('Invalid');
+    status = 429;
+    fireEvent.click(screen.getByTestId('login-submit'));
+    await waitFor(() => expect(screen.getByTestId('login-error').textContent).toContain('Too many'));
+  });
+  it('bootstrap mode forces /settings and sets the password with the token', async () => {
+    const f = route({ authenticated: true, passwordSet: false }, (u) => (u === '/api/auth/password' ? new Response(null, { status: 204 }) : undefined));
+    vi.stubGlobal('fetch', f);
+    render(<App />);
+    await screen.findByTestId('settings');
+    expect(location.pathname).toBe('/settings');
+    expect(QuietES.made).toBe(0);
+    fireEvent.change(screen.getByTestId('pw-token'), { target: { value: 'tok' } });
+    fireEvent.change(screen.getByTestId('pw-new'), { target: { value: 'short' } });
+    fireEvent.change(screen.getByTestId('pw-repeat'), { target: { value: 'short' } });
+    expect((screen.getByTestId('pw-submit') as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(screen.getByTestId('pw-new'), { target: { value: 'long-enough-pw1' } });
+    fireEvent.change(screen.getByTestId('pw-repeat'), { target: { value: 'long-enough-pw1' } });
+    fireEvent.click(screen.getByTestId('pw-submit'));
+    await waitFor(() => expect(f).toHaveBeenCalledWith('/api/auth/password', expect.objectContaining({ body: JSON.stringify({ token: 'tok', password: 'long-enough-pw1' }) })));
+  });
+  it('settings changes password and logs out', async () => {
+    const f = route({ authenticated: true, passwordSet: true }, (u) => (u === '/api/auth/password' || u === '/api/auth/logout' ? new Response(null, { status: 204 }) : undefined));
+    vi.stubGlobal('fetch', f);
+    history.replaceState(null, '', '/settings');
+    render(<App />);
+    await screen.findByTestId('settings');
+    fireEvent.change(screen.getByTestId('pw-current'), { target: { value: 'old' } });
+    fireEvent.change(screen.getByTestId('pw-new'), { target: { value: 'long-enough-pw1' } });
+    fireEvent.change(screen.getByTestId('pw-repeat'), { target: { value: 'long-enough-pw1' } });
+    fireEvent.click(screen.getByTestId('pw-submit'));
+    await screen.findByTestId('pw-done');
+    fireEvent.click(screen.getByTestId('logout'));
+    await waitFor(() => expect(f).toHaveBeenCalledWith('/api/auth/logout', expect.anything()));
+  });
+  it('a 401 from an API call shows login', async () => {
+    vi.stubGlobal('fetch', route({ authenticated: true, passwordSet: true }, (u) => (u.includes('/screen') ? jres(401, { error: 'unauthorized' }) : undefined)));
+    const { api } = await import('./api');
+    render(<App />);
+    await screen.findByTestId('nav-console');
+    await act(async () => { await api.screen('aaaaaaaa', 'a1').catch(() => {}); });
+    await screen.findByTestId('login');
+  });
+  it('session lost on EventSource error stops reconnecting', async () => {
+    let authed = true;
+    const made: QuietES[] = [];
+    class ES extends QuietES { constructor() { super(); made.push(this); } }
+    vi.stubGlobal('EventSource', ES);
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => jres(200, { authenticated: authed, passwordSet: true })));
+    render(<App />);
+    await waitFor(() => expect(made).toHaveLength(1));
+    authed = false;
+    await act(async () => { made[0].onerror?.(); });
+    await screen.findByTestId('login');
+    expect(QuietES.made).toBe(1);
   });
 });
