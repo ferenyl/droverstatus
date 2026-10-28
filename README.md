@@ -55,6 +55,18 @@ Responses carry a strict `Content-Security-Policy` (`default-src 'self'`, no obj
 
 > **No authentication.** There is no login and no CSRF token. Anyone who can reach the port can launch, close and kill agents and send them messages, which is shell-level access to your account. The server prints a warning at every start (a stronger one when bound to a non-loopback address). Keep it on loopback and never forward or proxy the port. See [SECURITY.md](SECURITY.md).
 
+### Reverse proxy (Nginx Proxy Manager)
+Add the proxy's origin to `ALLOWED_ORIGINS`. The server sends `X-Accel-Buffering: no` on `/api/events`, but if corrals still show up late after a reload, disable buffering for the event stream in the proxy host's **Advanced** tab:
+```nginx
+location /api/events {
+    proxy_pass $forward_scheme://$server:$port;
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_read_timeout 1h;
+}
+```
+Enable **HTTP/2 Support** on the SSL tab. Over HTTP/1.1, browsers allow only 6 connections per host, and each open tab holds one event stream.
+
 ## Documentation
 - [docs/API.md](docs/API.md): HTTP routes, error shapes, SSE events
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): data flow and drover version policy

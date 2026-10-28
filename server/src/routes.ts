@@ -67,6 +67,8 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root, project
       'content-type': 'text/event-stream',
       'cache-control': 'no-cache',
       connection: 'keep-alive',
+      // nginx buffers proxied responses by default, which stalls the stream
+      'x-accel-buffering': 'no',
     });
     res.flushHeaders();
     const send = (e: ServerEvent) => {
