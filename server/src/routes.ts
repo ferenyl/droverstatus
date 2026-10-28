@@ -27,7 +27,7 @@ const cliFail = (reply: FastifyReply, r: CliResult) =>
 
 const MAX_TEXT = 100_000;
 const MAX_DOC = 1_000_000;
-const DOC_EXT = /\.(md|markdown|txt|log)$/i;
+const DOC_EXT = /\.(md|markdown|txt|log|json|jsonl|ya?ml|toml|csv|xml|ini|conf)$/i;
 const SECRET_DIRS = new Set(['.ssh', '.gnupg', '.aws', '.kube', '.docker', '.password-store']);
 const inside = (child: string, parent: string) => child === parent || child.startsWith(parent.endsWith(sep) ? parent : parent + sep);
 

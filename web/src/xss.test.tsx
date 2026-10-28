@@ -4,6 +4,9 @@ import { describe, expect, it } from 'vitest';
 import type { Corral } from '@droverstatus/shared';
 import { renderMarkdown } from './components/Markdown';
 import { applyEvent } from './useCorrals';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { Doc } from './components/Doc';
 
 describe('renderMarkdown sanitizer', () => {
   it.each([
@@ -35,5 +38,29 @@ describe('applyEvent', () => {
     const del = applyEvent(upd, { type: 'corral-removed', hid: 'a' });
     expect([...del.keys()]).toEqual(['b']);
     expect(upd.size).toBe(2);
+  });
+});
+
+describe('Doc json', () => {
+  const show = async (text: string) => {
+    const el = document.createElement('div');
+    document.body.append(el);
+    const root = createRoot(el);
+    await act(async () => root.render(<Doc title="t" testId="d" json markdown={false} load={async () => text} />));
+    await act(async () => {
+      const d = el.querySelector('details')!;
+      d.open = true;
+      d.dispatchEvent(new Event('toggle'));
+    });
+    return el;
+  };
+  it('highlights, escapes, and offers Prettify only when not pretty', async () => {
+    const el = await show('{"a":"<img src=x onerror=1>","b":1}');
+    expect(el.querySelector('.json-key')?.textContent).toBe('"a"');
+    expect(el.querySelector('img')).toBeNull();
+    expect(el.querySelector('[data-testid=d-prettify]')).not.toBeNull();
+    await act(async () => (el.querySelector('[data-testid=d-prettify]') as HTMLElement).click());
+    expect(el.querySelector('[data-testid=d-prettify]')).toBeNull();
+    expect((await show('{\n  "a": 1\n}\n')).querySelector('[data-testid=d-prettify]')).toBeNull();
   });
 });

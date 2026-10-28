@@ -98,6 +98,10 @@ tr.state-blocked td { background: color-mix(in srgb, var(--warn) 10%, transparen
 .composer input { flex: 1; }
 .chips { display: flex; flex-wrap: wrap; gap: .4rem; }
 .md { margin: .75rem 0 0; padding: .75rem; background: var(--term); color: var(--termfg); border-radius: 6px; font-family: var(--mono); font-size: 12px; white-space: pre-wrap; max-height: 60vh; overflow: auto; }
+.json-key { color: #7cb7ff; }
+.json-str { color: #9ece6a; }
+.json-num { color: #ff9e64; }
+.json-lit { color: #bb9af7; }
 .toast-x { position: fixed; right: 1rem; bottom: 1rem; z-index: 1100; max-width: 28rem; padding: .6rem .9rem; background: var(--panel2); border: 1px solid var(--bad); border-left-width: 3px; border-radius: 6px; box-shadow: 0 6px 24px #0006; }
 dialog { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 10px; }
 dialog[open] { width: min(32rem, 92vw); }
