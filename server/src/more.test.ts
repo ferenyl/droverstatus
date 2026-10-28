@@ -3,7 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
-import { buildApp } from './app.js';
+import { buildAuthedApp } from './testAuth.js';
 import { listSessions } from './liveness.js';
 import { Store } from './store.js';
 import { startWatcher } from './watcher.js';
@@ -91,11 +91,11 @@ describe('SSE', () => {
   it('detaches store listeners when the client disconnects', async () => {
     const root = join(tmp, 'sse');
     corral(root, '55555555', { session: 's', slug: 'a' });
-    const { app, store } = await buildApp({ root, droverSh: join(tmp, 'x.sh'), webDist: join(tmp, 'none') });
+    const { app, store, cookie } = await buildAuthedApp({ root, droverSh: join(tmp, 'x.sh'), webDist: join(tmp, 'none') });
     await app.listen({ host: '127.0.0.1', port: 0 });
     const port = (app.server.address() as { port: number }).port;
     const ac = new AbortController();
-    const res = await fetch(`http://127.0.0.1:${port}/api/events`, { signal: ac.signal });
+    const res = await fetch(`http://127.0.0.1:${port}/api/events`, { signal: ac.signal, headers: { cookie } });
     await res.body!.getReader().read();
     expect(store.listenerCount('updated')).toBe(1);
     ac.abort();
