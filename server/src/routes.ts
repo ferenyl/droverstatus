@@ -67,6 +67,8 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root, project
       'content-type': 'text/event-stream',
       'cache-control': 'no-cache',
       connection: 'keep-alive',
+      // nginx buffers proxied responses by default, which stalls the stream
+      'x-accel-buffering': 'no',
     });
     res.flushHeaders();
     const send = (e: ServerEvent) => {
@@ -78,9 +80,9 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root, project
     const onUpdated = (hid: string, corral: Corral) => send({ type: 'corral-updated', hid, corral });
     const onRemoved = (hid: string) => send({ type: 'corral-removed', hid });
     store.on('updated', onUpdated).on('removed', onRemoved);
+    const untrack = trackStream?.(req, () => res.end());
     const ping = setInterval(() => {
       try {
-    const untrack = trackStream?.(req, () => res.end());
         res.write(': ping\n\n');
       } catch {
         clearInterval(ping);
@@ -90,9 +92,9 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root, project
     res.on('close', () => clearInterval(ping));
     req.raw.on('close', () => {
       sseClients--;
+      untrack?.();
       clearInterval(ping);
       store.off('updated', onUpdated).off('removed', onRemoved);
-      untrack?.();
     });
   });
 

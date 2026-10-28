@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { buildApp } from './app.js';
+import { buildAuthedApp } from './testAuth.js';
 import { DroverCli, parseWorktrees } from './droverCli.js';
 import { buildCorral } from './store.js';
 
@@ -74,8 +74,8 @@ describe('fake drover.sh is faithful to 0.9.0', () => {
     expect([reg.closed, reg.shutdown]).toEqual([true, true]);
   });
   it('close route -> 409 + worktrees via the fake', async () => {
-    const { app } = await buildApp({ root, droverSh: join(kit, 'fake/drover.sh'), webDist: join(root, 'none') });
-    const r = await app.inject({ method: 'DELETE', url: '/api/corrals/e5e5e5e5', headers: { host: 'localhost' } });
+    const { app, cookie } = await buildAuthedApp({ root, droverSh: join(kit, 'fake/drover.sh'), webDist: join(root, 'none') });
+    const r = await app.inject({ method: 'DELETE', url: '/api/corrals/e5e5e5e5', headers: { host: 'localhost', cookie } });
     expect([r.statusCode, r.json().worktrees[0].dirty]).toEqual([409, true]);
   });
 });

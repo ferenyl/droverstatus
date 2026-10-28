@@ -3,7 +3,7 @@ import { chmodSync, readFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { buildApp } from './app.js';
+import { buildAuthedApp } from './testAuth.js';
 import { DroverCli } from './droverCli.js';
 import { startWatcher } from './watcher.js';
 import { Store } from './store.js';
@@ -24,7 +24,8 @@ function fakeSh(file: string, body: string) {
 describe('routes', () => {
   const root = join(tmp, 'root');
   const sh = join(tmp, 'drover.sh');
-  let app: Awaited<ReturnType<typeof buildApp>>['app'];
+  let app: Awaited<ReturnType<typeof buildAuthedApp>>['app'];
+  let cookie: string;
 
   beforeAll(async () => {
     corral(root, 'aaaaaaaa', { session: 's1', slug: 'one', agents: { dev: { pane_id: 'terminal_1' } } });
@@ -39,11 +40,11 @@ describe('routes', () => {
   fail) exit 2;;
 esac`,
     );
-    ({ app } = await buildApp({ root, droverSh: sh, webDist: join(tmp, 'none') }));
+    ({ app, cookie } = await buildAuthedApp({ root, droverSh: sh, webDist: join(tmp, 'none') }));
   });
 
   const req = (method: 'GET' | 'POST' | 'DELETE', url: string, payload?: object, host = 'localhost:4177') =>
-    app.inject({ method, url, payload, headers: { host } });
+    app.inject({ method, url, payload, headers: { host, cookie } });
 
   it('rejects foreign Host', async () => {
     expect((await req('GET', '/api/corrals', undefined, 'evil.example:4177')).statusCode).toBe(403);
@@ -152,11 +153,11 @@ describe('SSE', () => {
   it('sends snapshot, then corral-updated and corral-removed', async () => {
     const root = join(tmp, 'sse');
     corral(root, '11111111', { session: 's', slug: 'a' });
-    const { app, store } = await buildApp({ root, droverSh: join(tmp, 'none.sh'), webDist: join(tmp, 'none') });
+    const { app, store, cookie } = await buildAuthedApp({ root, droverSh: join(tmp, 'none.sh'), webDist: join(tmp, 'none') });
     await app.listen({ host: '127.0.0.1', port: 0 });
     const port = (app.server.address() as { port: number }).port;
     const ac = new AbortController();
-    const res = await fetch(`http://127.0.0.1:${port}/api/events`, { signal: ac.signal });
+    const res = await fetch(`http://127.0.0.1:${port}/api/events`, { signal: ac.signal, headers: { cookie } });
     expect(res.headers.get('content-type')).toBe('text/event-stream');
     const reader = res.body!.getReader();
     let buf = '';
@@ -182,8 +183,8 @@ describe('SPA fallback', () => {
     const dist = join(tmp, 'dist');
     mkdirSync(dist, { recursive: true });
     writeFileSync(join(dist, 'index.html'), '<h1>spa</h1>');
-    const { app } = await buildApp({ root: join(tmp, 'spa-root'), droverSh: join(tmp, 'none.sh'), webDist: dist });
-    const get = (url: string, method: 'GET' | 'POST' = 'GET') => app.inject({ method, url, headers: { host: 'localhost' } });
+    const { app, cookie } = await buildAuthedApp({ root: join(tmp, 'spa-root'), droverSh: join(tmp, 'none.sh'), webDist: dist });
+    const get = (url: string, method: 'GET' | 'POST' = 'GET') => app.inject({ method, url, headers: { host: 'localhost', cookie } });
     expect((await get('/')).body).toBe('<h1>spa</h1>');
     expect((await get('/corral/aaaaaaaa')).body).toBe('<h1>spa</h1>');
     expect((await get('/api/nope')).statusCode).toBe(404);
