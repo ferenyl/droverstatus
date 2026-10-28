@@ -48,3 +48,5 @@ export const buildBoard = (f: BoardFilter): string => {
   const s = q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':');
   return s ? `/board?${s}` : '/board';
 };
+
+export const isSettings = (path: string) => path === '/settings' || path.startsWith('/settings/');

@@ -180,3 +180,9 @@ a.pill { text-decoration: none; }
 .md-body th, .md-body td { border: 1px solid var(--bs-border-color, #8884); padding: .2rem .5rem; }
 .md-body img, .md-body svg { max-width: 100%; height: auto; }
 .feed-tools { display: flex; gap: .5rem; }
+
+.views-link { color: var(--muted); text-decoration: none; }
+.views-link.on { color: var(--fg); }
+.auth-card { max-width: 24rem; margin: 10vh auto 0; padding: 1.5rem; display: grid; gap: .75rem; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
+.auth-card h1 { font-size: 1.25rem; margin: 0; }
+.auth-card .error { color: var(--bad); }
