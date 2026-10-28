@@ -6,6 +6,12 @@
 #   journalctl --user -u droverstatus -f
 #
 # Needs node, zellij, claude, jq and git on PATH; adjust Environment=PATH if they live elsewhere.
+#
+# First login: until a password is set, the login token is in the runtime dir, not in the journal:
+#   cat $XDG_RUNTIME_DIR/droverstatus/bootstrap-token
+# Log in on the login page, then set a password in Settings. The token file is deleted once a password exists.
+# Forgot the password: droverstatus reset-password (same user). Set one from the shell: droverstatus set-password.
+# Behind an HTTPS reverse proxy, add --trust-proxy <proxy IP or CIDR> to ExecStart (see README, Authentication).
 
 [Unit]
 Description=droverstatus dashboard for drover corrals
