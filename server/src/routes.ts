@@ -2,7 +2,7 @@
 import { existsSync, statSync } from 'node:fs';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, join, sep } from 'node:path';
-import type { FastifyInstance, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { HID_RE, KEBAB_RE, MODELS } from '@droverstatus/shared';
 import type { ApiError, Corral, ServerEvent } from '@droverstatus/shared';
 import type { CliResult, DroverCli } from './droverCli.js';
@@ -17,6 +17,8 @@ export interface Deps {
   /** optional allowlist for new-corral project dirs (empty = any existing dir) */
   projectRoots?: string[];
   maxSse?: number;
+  /** registers `end` to close an event stream when its session ends; returns the unregister function */
+  trackStream?: (req: FastifyRequest, end: () => void) => () => void;
 }
 
 const fail = (reply: FastifyReply, status: number, body: ApiError) => reply.code(status).send(body);
@@ -29,7 +31,7 @@ const DOC_EXT = /\.(md|markdown|txt|log)$/i;
 const SECRET_DIRS = new Set(['.ssh', '.gnupg', '.aws', '.kube', '.docker', '.password-store']);
 const inside = (child: string, parent: string) => child === parent || child.startsWith(parent.endsWith(sep) ? parent : parent + sep);
 
-export function registerRoutes(app: FastifyInstance, { store, cli, root, projectRoots = [], maxSse = 50 }: Deps): void {
+export function registerRoutes(app: FastifyInstance, { store, cli, root, projectRoots = [], maxSse = 50, trackStream }: Deps): void {
   /** one lifecycle action per key at a time; a second concurrent request gets 409 */
   const inflight = new Set<string>();
   const guarded = async <T>(key: string, reply: FastifyReply, fn: () => Promise<T>) => {
@@ -78,6 +80,7 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root, project
     store.on('updated', onUpdated).on('removed', onRemoved);
     const ping = setInterval(() => {
       try {
+    const untrack = trackStream?.(req, () => res.end());
         res.write(': ping\n\n');
       } catch {
         clearInterval(ping);
@@ -89,6 +92,7 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root, project
       sseClients--;
       clearInterval(ping);
       store.off('updated', onUpdated).off('removed', onRemoved);
+      untrack?.();
     });
   });
 

@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
-import { existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 import Fastify, { type FastifyError } from 'fastify';
+import { Auth } from './auth/auth.js';
+import { registerAuth, sessionOf } from './auth/routes.js';
 import { DroverCli } from './droverCli.js';
 import { registerRoutes } from './routes.js';
 import { Store } from './store.js';
@@ -21,12 +24,23 @@ export interface AppOpts {
   projectRoots?: string[];
   detached?: boolean;
   allowedOrigins?: string[];
+  /** default: a throwaway auth dir in bootstrap mode (index.ts always passes the real one) */
+  auth?: Auth;
+  /** Fastify trustProxy: honour X-Forwarded-* from these proxies (true = any) */
+  trustProxy?: boolean | string;
 }
 
-export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, host: bind = '127.0.0.1', projectRoots, detached, allowedOrigins = [] }: AppOpts) {
+export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, host: bind = '127.0.0.1', projectRoots, detached, allowedOrigins = [], auth: authOpt, trustProxy = false }: AppOpts) {
   const store = new Store(root);
   await store.scan();
-  const app = Fastify({ bodyLimit: 256 * 1024, forceCloseConnections: true });
+  let auth = authOpt;
+  if (!auth) {
+    const r = await Auth.open({ file: join(mkdtempSync(join(tmpdir(), 'droverstatus-auth-')), 'auth.json') });
+    if (!r.ok) throw new Error(r.error);
+    auth = r.value;
+  }
+  const app = Fastify({ bodyLimit: 256 * 1024, forceCloseConnections: true, trustProxy });
+  app.addHook('onClose', () => auth.close());
   const wildcard = bind === '0.0.0.0' || bind === '::';
   const bound = bind.includes(':') ? `[${bind}]` : bind;
   const LOOPBACK = new Set(['127.0.0.1', 'localhost', '[::1]']);
@@ -57,10 +71,11 @@ export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, h
     const status = err.statusCode && err.statusCode < 500 ? err.statusCode : 500;
     reply.code(status).send({ error: status === 500 ? 'internal error' : err.message });
   });
-  registerRoutes(app, { store, cli: new DroverCli(droverSh, undefined, detached), root, projectRoots });
+  registerAuth(app, auth);
+  registerRoutes(app, { store, cli: new DroverCli(droverSh, undefined, detached), root, projectRoots, trackStream: (req, end) => auth.track(sessionOf(req), end) });
   if (dev) {
     app.setNotFoundHandler((_req, reply) => reply.code(404).send({ error: `not found (dev: API only, the UI is on the Vite dev server http://127.0.0.1:${webPort})` }));
-    return { app, store };
+    return { app, store, auth };
   }
   if (typeof __WEB_ASSETS__ !== 'undefined' && !webDist) {
     const assets = new Map(Object.entries(__WEB_ASSETS__).map(([p, [type, b64]]) => [p, { type, gz: Buffer.from(b64, 'base64') }]));
@@ -72,7 +87,7 @@ export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, h
       if (/\bgzip\b/.test(req.headers['accept-encoding'] ?? '')) return reply.header('content-encoding', 'gzip').send(a.gz);
       return reply.send(gunzipSync(a.gz));
     });
-    return { app, store };
+    return { app, store, auth };
   }
   const dist = webDist ?? resolve(dirname(fileURLToPath(import.meta.url)), '../../web/dist');
   if (existsSync(dist)) {
@@ -82,5 +97,5 @@ export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, h
       req.method === 'GET' && !req.url.startsWith('/api/') ? reply.sendFile('index.html') : reply.code(404).send({ error: 'not found' }),
     );
   }
-  return { app, store };
+  return { app, store, auth };
 }

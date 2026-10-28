@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { accessSync, constants, existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
+import { isIP } from 'node:net';
 import { delimiter, dirname, join } from 'node:path';
+import { authPaths } from './auth/file.js';
 
 export const MIN_DROVER_VERSION = '0.11.0';
 
@@ -77,6 +79,21 @@ export function parseOrigins(list: string): string[] {
   });
 }
 
+/** '' / 0 / false = off, 1 / true = any proxy, else comma-separated proxy IPs or CIDRs */
+export function parseTrustProxy(v: string): boolean | string {
+  const s = v.trim();
+  if (/^(|0|false)$/i.test(s)) return false;
+  if (/^(1|true)$/i.test(s)) return true;
+  const list = s.split(',').map((a) => a.trim()).filter(Boolean);
+  for (const a of list) {
+    const [ip, bits, extra] = a.split('/');
+    const max = isIP(ip) === 4 ? 32 : 128;
+    if (!isIP(ip) || extra !== undefined || (bits !== undefined && !(/^\d+$/.test(bits) && Number(bits) <= max)))
+      throw new Error(`invalid trust proxy (true, or IPs/CIDRs expected): ${a}`);
+  }
+  return list.join(',');
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env, home = homedir()) {
   const claudeDir = env.CLAUDE_CONFIG_DIR || join(home, '.claude');
   const droverSh = env.DROVER_SH ?? findDroverSh(env.PATH, home, claudeDir);
@@ -111,6 +128,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, home = homedir(
     // extra browser origins (e.g. a reverse proxy), also accepted as Host
     allowedOrigins: parseOrigins(env.ALLOWED_ORIGINS ?? ''),
     dev: env.DROVER_DEV === '1',
+    authPaths: authPaths(env, home),
+    // X-Forwarded-* (client IP, https) only from trusted proxies: they are spoofable otherwise
+    trustProxy: parseTrustProxy(env.TRUST_PROXY ?? ''),
     // corrals are started through the systemd user manager when it is reachable (DROVER_DETACH=0 opts out)
     detached: env.DROVER_DETACH !== '0' && !!env.XDG_RUNTIME_DIR && existsSync(join(env.XDG_RUNTIME_DIR, 'systemd', 'private')),
   };

@@ -174,6 +174,8 @@ export interface LoginBody {
   token?: string;
 }
 
+export const MIN_PASSWORD_LENGTH = 12;
+
 /** POST /api/auth/password: current password, or the bootstrap token while none is set */
 export interface PasswordBody {
   current?: string;
