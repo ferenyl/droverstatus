@@ -4,7 +4,7 @@ Local web UI for drover (the `ferenyl-claude` plugin) corrals: live view of drov
 
 ## Requirements
 - Linux (tested); macOS untested
-- Node >= 22 and npm
+- Node >= 26 and npm
 - [Zellij](https://zellij.dev)
 - The drover plugin `ferenyl-claude` >= 0.9.0 (provides `drover.sh`)
 
@@ -20,10 +20,10 @@ Not multi-user, and not meant to be exposed to the internet without an HTTPS rev
 npm install
 npm run dev     # server (tsx watch) + vite dev server; ports: npm run dev -- -p 4187 -w 5187
 npm start       # build web, then serve everything from the server
-npm run build:dist   # single executable: dist/droverstatus (needs Node >= 22)
+npm run build:dist   # single executable: dist/droverstatus (needs Node >= 26)
 ```
 ### Single file (dist)
-`npm run build:dist` bundles server and UI into one executable, `dist/droverstatus` (needs Node >= 22 on the target machine).
+`npm run build:dist` bundles server and UI into one executable, `dist/droverstatus` (needs Node >= 26 on the target machine).
 ```
 ./dist/droverstatus              # run directly, UI + API on http://127.0.0.1:4177
 ./dist/droverstatus -p 5000      # other port (--port 5000)

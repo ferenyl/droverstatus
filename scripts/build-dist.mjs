@@ -13,6 +13,7 @@ const types = {
   '.png': 'image/png',
   '.ico': 'image/x-icon',
   '.json': 'application/json',
+  '.webmanifest': 'application/manifest+json',
   '.woff2': 'font/woff2',
 };
 const webDist = 'web/dist';
@@ -30,7 +31,7 @@ await build({
   outfile: out,
   bundle: true,
   platform: 'node',
-  target: 'node22',
+  target: 'node26',
   format: 'esm',
   minify: true,
   legalComments: 'none',
