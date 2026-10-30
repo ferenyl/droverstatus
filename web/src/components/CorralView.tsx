@@ -103,7 +103,7 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
           <section data-testid="docs" className="card-x">
             {c.docs.length === 0 && <p className="empty-note">No docs yet</p>}
             {c.docs.map((d) => (
-              <Doc key={d.path} testId={`doc-${d.note || d.path}`} title={`${d.note || d.path}${d.agent ? ` · ${d.agent}` : ''} — ${d.path}`} load={() => api.doc(c.hid, d.path)} version={d.stamp} markdown={/\.(md|markdown)$/i.test(d.path)} json={/\.json$/i.test(d.path)} onArtifact={() => act(() => api.send(c.hid, `create a Claude artifact of ${d.path}`))} />
+              <Doc key={d.path} testId={`doc-${d.note || d.path}`} title={`${d.note || d.path}${d.agent ? ` · ${d.agent}` : ''} — ${d.path}`} load={() => api.doc(c.hid, d.path)} version={d.stamp} markdown={/\.(md|markdown)$/i.test(d.path)} json={/\.json$/i.test(d.path)} html={/\.html?$/i.test(d.path)} image={/\.(png|jpe?g|gif|webp|avif|svg)$/i.test(d.path) ? api.docUrl(c.hid, d.path) : undefined} onArtifact={() => act(() => api.send(c.hid, `create a Claude artifact of ${d.path}`))} />
             ))}
           </section>
         )}

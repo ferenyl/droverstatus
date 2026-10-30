@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { existsSync, statSync } from 'node:fs';
 import { readFile, realpath, stat } from 'node:fs/promises';
-import { isAbsolute, join, sep } from 'node:path';
+import { basename, isAbsolute, join, sep } from 'node:path';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { HID_RE, KEBAB_RE, MODELS } from '@droverstatus/shared';
 import type { ApiError, Corral, ServerEvent } from '@droverstatus/shared';
@@ -27,7 +27,10 @@ const cliFail = (reply: FastifyReply, r: CliResult) =>
 
 const MAX_TEXT = 100_000;
 const MAX_DOC = 1_000_000;
-const DOC_EXT = /\.(md|markdown|txt|log|json|jsonl|ya?ml|toml|csv|xml|ini|conf)$/i;
+const DOC_EXT = /\.(md|markdown|html?|txt|log|json|jsonl|ya?ml|toml|csv|xml|ini|conf)$/i;
+const MAX_IMAGE = 20_000_000;
+const IMAGE_TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', avif: 'image/avif', svg: 'image/svg+xml' };
+const imageType = (file: string) => IMAGE_TYPES[file.slice(file.lastIndexOf('.') + 1).toLowerCase()];
 const SECRET_DIRS = new Set(['.ssh', '.gnupg', '.aws', '.kube', '.docker', '.password-store']);
 const inside = (child: string, parent: string) => child === parent || child.startsWith(parent.endsWith(sep) ? parent : parent + sep);
 
@@ -212,15 +215,25 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root, project
     if (!corralOr404(req.params.hid, reply)) return;
     const path = req.query.path;
     if (typeof path !== 'string' || !(await docsOf(join(root, req.params.hid))).some((d) => d.path === path)) return fail(reply, 404, { error: 'unknown doc' });
-    // docs.json is agent-writable: only text/markdown files, resolved through symlinks, never secret dirs
+    // docs.json is agent-writable: only text/markdown/image files, resolved through symlinks, never secret dirs
     let real: string;
     try {
       real = await realpath(path);
     } catch {
       return fail(reply, 404, { error: 'not found' });
     }
-    if (!DOC_EXT.test(real) || real.split(sep).some((p) => SECRET_DIRS.has(p))) return fail(reply, 404, { error: 'unknown doc' });
-    return md(real, reply);
+    const image = imageType(real);
+    if ((!DOC_EXT.test(real) && !image) || real.split(sep).some((p) => SECRET_DIRS.has(p))) return fail(reply, 404, { error: 'unknown doc' });
+    if (!image) return md(real, reply);
+    try {
+      const st = await stat(real);
+      if (!st.isFile()) return fail(reply, 404, { error: 'not found' });
+      if (st.size > MAX_IMAGE) return fail(reply, 413, { error: 'doc too large' });
+      const name = basename(real).replace(/[^\w.-]/g, '_');
+      return reply.type(image).header('content-disposition', `inline; filename="${name}"`).send(await readFile(real));
+    } catch {
+      return fail(reply, 404, { error: 'not found' });
+    }
   });
 
   app.get<{ Params: { hid: string } }>('/api/corrals/:hid/brief', async (req, reply) => {

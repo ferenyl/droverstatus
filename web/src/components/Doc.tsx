@@ -28,12 +28,12 @@ function prettier(text: string): string | undefined {
   }
 }
 
-/** collapsed markdown/text document, fetched when first opened */
-export function Doc({ title, load, testId, markdown = true, onArtifact, version, json = false }: { title: string; load: () => Promise<string>; testId: string; markdown?: boolean; onArtifact?: () => void; version?: string; json?: boolean }) {
+/** collapsed markdown/text/html document or image (`image`: its url), fetched when first opened */
+export function Doc({ title, load, testId, markdown = true, onArtifact, version, json = false, html = false, image }: { title: string; load: () => Promise<string>; testId: string; markdown?: boolean; onArtifact?: () => void; version?: string; json?: boolean; html?: boolean; image?: string }) {
   const [text, setText] = useState<string>();
   const pretty = json && text !== undefined ? prettier(text) : undefined;
   const open = useRef(false);
-  const fetch = () => load().then(setText, () => setText('(not available)'));
+  const fetch = () => (image ? Promise.resolve(setText('')) : load().then(setText, () => setText('(not available)')));
   // re-fetch an already opened doc when the file changed on disk
   useEffect(() => {
     if (open.current) void fetch();
@@ -55,7 +55,8 @@ export function Doc({ title, load, testId, markdown = true, onArtifact, version,
           <button className="btn btn-sm btn-solid theme-primary" data-testid={`${testId}-prettify`} onClick={() => setText(pretty)}>Prettify</button>
         </div>
       )}
-      {text !== undefined && json && !markdown ? <pre data-testid={`${testId}-body`} className="md">{highlight(text)}</pre> : text !== undefined && (markdown ? <Markdown md={text} testId={`${testId}-body`} /> : <pre data-testid={`${testId}-body`} className="md">{text}</pre>)}
+      {/* agent-written html: sandboxed without scripts or same-origin access */}
+      {text !== undefined && image ? <img data-testid={`${testId}-body`} className="doc-image" alt={title} src={version ? `${image}&v=${encodeURIComponent(version)}` : image} /> : text !== undefined && html ? <iframe data-testid={`${testId}-body`} className="doc-html" sandbox="" title={title} srcDoc={text} /> : text !== undefined && json && !markdown ? <pre data-testid={`${testId}-body`} className="md">{highlight(text)}</pre> : text !== undefined && (markdown ? <Markdown md={text} testId={`${testId}-body`} /> : <pre data-testid={`${testId}-body`} className="md">{text}</pre>)}
     </details>
   );
 }

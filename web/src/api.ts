@@ -48,7 +48,8 @@ export const api = {
   olderMessages: (hid: string, before: number) =>
     call<{ messages: Message[]; offset: number }>('GET', `${base(hid)}/messages?before=${before}`),
   story: (hid: string, id: string) => call<string>('GET', `${base(hid)}/stories/${encodeURIComponent(id)}`),
-  doc: (hid: string, path: string) => call<string>('GET', `${base(hid)}/doc?path=${encodeURIComponent(path)}`),
+  docUrl: (hid: string, path: string) => `${base(hid)}/doc?path=${encodeURIComponent(path)}`,
+  doc: (hid: string, path: string) => call<string>('GET', api.docUrl(hid, path)),
   brief: (hid: string) => call<string>('GET', `${base(hid)}/brief`),
   worktrees: (hid: string) => call<Worktree[]>('GET', `${base(hid)}/worktrees`),
   report: (hid: string, id: string) => call<string>('GET', `${base(hid)}/reports/${id}`),
