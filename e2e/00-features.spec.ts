@@ -262,6 +262,24 @@ test('docs tab lists brief and registered docs; unregistered paths are refused',
   } finally { rmSync(spec, { force: true }); rmSync(list, { force: true }); }
 });
 
+test('image docs render as an image, not as text', async ({ page, request }) => {
+  const png = join(root, 'shot-e2e.png'), list = join(root, A, 'docs.json');
+  // 1x1 png
+  writeFileSync(png, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64'));
+  writeFileSync(list, JSON.stringify([{ path: png, note: 'the shot', agent: 'alpha', added_at: '2026-10-22T10:00:00Z' }]));
+  try {
+    await page.goto(`/corrals/${A}/docs`);
+    await page.getByTestId('doc-the shot').locator('summary').click();
+    const img = page.getByTestId('doc-the shot-body');
+    await expect(img).toHaveJSProperty('tagName', 'IMG');
+    await expect.poll(() => img.evaluate((e: HTMLImageElement) => e.complete && e.naturalWidth)).toBe(1);
+    const r = await request.get(`${process.env.E2E_API}/api/corrals/${A}/doc?path=${encodeURIComponent(png)}`);
+    expect(r.status()).toBe(200);
+    expect(r.headers()['content-type']).toBe('image/png');
+    expect(r.headers()['content-disposition']).toBe('inline; filename="shot-e2e.png"');
+  } finally { rmSync(png, { force: true }); rmSync(list, { force: true }); }
+});
+
 test('attention badge counts blocked, stuck, stories and queued; title shows the total', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId(`attention-${A}`)).toHaveText('2'); // beta blocked + alpha stuck

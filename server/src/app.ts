@@ -30,6 +30,9 @@ export interface AppOpts {
   trustProxy?: boolean | string;
 }
 
+// hashed bundles never change; everything else (index.html, manifest, icons) is revalidated so a release shows up at once
+const cacheControl = (path: string) => (/[\\/]assets[\\/]/.test(path) ? 'public, max-age=31536000, immutable' : 'no-cache');
+
 export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, host: bind = '127.0.0.1', projectRoots, detached, allowedOrigins = [], auth: authOpt, trustProxy = false }: AppOpts) {
   const store = new Store(root);
   await store.scan();
@@ -83,7 +86,7 @@ export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, h
     app.setNotFoundHandler((req, reply) => {
       if (req.method !== 'GET' || req.url.startsWith('/api/')) return reply.code(404).send({ error: 'not found' });
       const a = assets.get(req.url.split('?')[0]) ?? index;
-      reply.type(a.type).header('vary', 'accept-encoding');
+      reply.type(a.type).header('vary', 'accept-encoding').header('cache-control', cacheControl(a === index ? '/index.html' : req.url));
       if (/\bgzip\b/.test(req.headers['accept-encoding'] ?? '')) return reply.header('content-encoding', 'gzip').send(a.gz);
       return reply.send(gunzipSync(a.gz));
     });
@@ -92,7 +95,7 @@ export async function buildApp({ root, droverSh, webDist, dev, webPort = 5187, h
   const dist = webDist ?? resolve(dirname(fileURLToPath(import.meta.url)), '../../web/dist');
   if (existsSync(dist)) {
     const { default: fastifyStatic } = await import('@fastify/static');
-    await app.register(fastifyStatic, { root: dist });
+    await app.register(fastifyStatic, { root: dist, cacheControl: false, setHeaders: (res, file) => res.header('cache-control', cacheControl(file)) });
     app.setNotFoundHandler((req, reply) =>
       req.method === 'GET' && !req.url.startsWith('/api/') ? reply.sendFile('index.html') : reply.code(404).send({ error: 'not found' }),
     );
