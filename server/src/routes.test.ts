@@ -53,8 +53,8 @@ esac`,
     expect((await req('GET', '/api/corrals')).json().map((c: any) => c.hid)).toEqual(['aaaaaaaa', 'bbbbbbbb']);
   });
   it('validates new corral input', async () => {
-    const ok = { slug: 'x', dir: tmp, model: 'sonnet', brief: 'b' };
-    for (const bad of [{ slug: 'Bad_Slug' }, { model: 'gpt' }, { dir: 'relative' }, { dir: join(tmp, 'nope') }, { dir: '-x' }, { slug: 5 }, { dir: 5 }, { model: ['sonnet'] }, { brief: {} }]) {
+    const ok = { slug: 'x', dir: tmp, brief: 'b' };
+    for (const bad of [{ slug: 'Bad_Slug' }, { dir: 'relative' }, { dir: join(tmp, 'nope') }, { dir: '-x' }, { slug: 5 }, { dir: 5 }, { brief: {} }]) {
       expect((await req('POST', '/api/corrals', { ...ok, ...bad })).statusCode).toBe(400);
     }
     const r = await req('POST', '/api/corrals', ok);

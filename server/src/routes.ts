@@ -3,7 +3,7 @@ import { existsSync, statSync } from 'node:fs';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { basename, isAbsolute, join, sep } from 'node:path';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { HID_RE, KEBAB_RE, MODELS } from '@droverstatus/shared';
+import { FLOWS, HID_RE, KEBAB_RE, MODELS, PERM_MODES, TRACKER_STEPS } from '@droverstatus/shared';
 import type { ApiError, Corral, ServerEvent } from '@droverstatus/shared';
 import type { CliResult, DroverCli } from './droverCli.js';
 import { parseWorktrees } from './droverCli.js';
@@ -59,6 +59,21 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root, project
     return true;
   };
 
+  const agentOr404 = (hid: string, id: string, reply: FastifyReply) => {
+    const c = corralOr404(hid, reply);
+    if (!c || badId(id, reply)) return;
+    if (!c.agents.some((a) => a.id === id)) return void fail(reply, 404, { error: 'unknown agent' });
+    return c;
+  };
+  const taskOr404 = (hid: string, tid: string, reply: FastifyReply) => {
+    const c = corralOr404(hid, reply);
+    if (!c) return;
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(tid)) return void fail(reply, 400, { error: 'bad task id' });
+    if (!c.tasks.some((t) => t.id === tid)) return void fail(reply, 404, { error: 'unknown task' });
+    return c;
+  };
+  const text = (v: unknown, max = MAX_TEXT) => (typeof v === 'string' && v.trim() && v.length <= max ? v.trim() : undefined);
+
   app.get('/api/corrals', async () => store.list());
 
   app.get('/api/events', (req, reply) => {
@@ -101,18 +116,17 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root, project
     });
   });
 
-  app.post<{ Body: { slug?: string; dir?: string; model?: string; brief?: string } }>('/api/corrals', async (req, reply) => {
-    const { slug = '', dir = '', model = 'sonnet', brief = '' } = req.body ?? {};
-    if ([slug, dir, model, brief].some((v) => typeof v !== 'string')) return fail(reply, 400, { error: 'fields must be strings' });
+  app.post<{ Body: { slug?: string; dir?: string; brief?: string } }>('/api/corrals', async (req, reply) => {
+    const { slug = '', dir = '', brief = '' } = req.body ?? {};
+    if ([slug, dir, brief].some((v) => typeof v !== 'string')) return fail(reply, 400, { error: 'fields must be strings' });
     if (brief.length > MAX_TEXT) return fail(reply, 400, { error: 'brief too long' });
     if (!KEBAB_RE.test(slug)) return fail(reply, 400, { error: 'slug must be kebab-case' });
-    if (!(MODELS as string[]).includes(model)) return fail(reply, 400, { error: 'bad model' });
     if (!isAbsolute(dir) || !existsSync(dir) || !statSync(dir).isDirectory()) return fail(reply, 400, { error: 'project dir must be an existing absolute path' });
     if (projectRoots.length) {
       const real = await realpath(dir).catch(() => dir);
       if (!projectRoots.some((r) => inside(real, r))) return fail(reply, 403, { error: 'project dir outside allowed roots' });
     }
-    const r = await cli.newDrover(slug, dir, model, brief);
+    const r = await cli.newDrover(slug, dir, brief);
     if (!r.ok) return cliFail(reply, r);
     if (!r.hid) return fail(reply, 500, { error: 'no HID in output', stderr: r.stdout });
     return reply.code(201).send({ hid: r.hid });
@@ -162,6 +176,86 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root, project
     });
   });
 
+  app.put<{ Params: { hid: string; id: string }; Body: { model?: string } }>('/api/corrals/:hid/agents/:id/model', async (req, reply) => {
+    const c = agentOr404(req.params.hid, req.params.id, reply);
+    if (!c) return;
+    const model = req.body?.model;
+    if (!(MODELS as unknown[]).includes(model)) return fail(reply, 400, { error: 'bad model' });
+    return guarded(`${c.hid}/${req.params.id}`, reply, async () => {
+      const r = await cli.model(c.hid, req.params.id, model as string);
+      return r.ok ? { ok: true } : cliFail(reply, r);
+    });
+  });
+
+  app.put<{ Params: { hid: string; id: string }; Body: { mode?: string } }>('/api/corrals/:hid/agents/:id/perm', async (req, reply) => {
+    const c = agentOr404(req.params.hid, req.params.id, reply);
+    if (!c) return;
+    const mode = req.body?.mode;
+    if (!(PERM_MODES as readonly unknown[]).includes(mode)) return fail(reply, 400, { error: 'bad permission mode' });
+    return guarded(`${c.hid}/${req.params.id}`, reply, async () => {
+      const r = await cli.perm(c.hid, req.params.id, mode as string);
+      return r.ok ? { ok: true } : cliFail(reply, r);
+    });
+  });
+
+  app.put<{ Params: { hid: string; id: string }; Body: { purpose?: string } }>('/api/corrals/:hid/agents/:id/purpose', async (req, reply) => {
+    const c = agentOr404(req.params.hid, req.params.id, reply);
+    if (!c) return;
+    const purpose = text(req.body?.purpose);
+    if (!purpose) return fail(reply, 400, { error: 'purpose required' });
+    return guarded(`${c.hid}/${req.params.id}`, reply, async () => {
+      const r = await cli.purpose(c.hid, req.params.id, purpose);
+      return r.ok ? { ok: true } : cliFail(reply, r);
+    });
+  });
+
+  app.post<{ Params: { hid: string; id: string } }>('/api/corrals/:hid/agents/:id/prlink', async (req, reply) => {
+    const c = agentOr404(req.params.hid, req.params.id, reply);
+    if (!c) return;
+    return guarded(`${c.hid}/${req.params.id}`, reply, async () => {
+      const r = await cli.prlink(c.hid, req.params.id);
+      if (!r.ok) return cliFail(reply, r);
+      const url = r.stdout.trim().split('\n').pop() ?? '';
+      return /^https:\/\//.test(url) ? { url } : fail(reply, 500, { error: 'no PR link in output', stderr: r.stdout });
+    });
+  });
+
+  app.post<{ Params: { hid: string; tid: string }; Body: { scope?: string } }>('/api/corrals/:hid/tasks/:tid/approve', async (req, reply) => {
+    const c = taskOr404(req.params.hid, req.params.tid, reply);
+    if (!c) return;
+    const scope = text(req.body?.scope, 2000);
+    if (!scope) return fail(reply, 400, { error: 'scope required' });
+    const r = await cli.approve(c.hid, req.params.tid, scope);
+    return r.ok ? { ok: true } : cliFail(reply, r);
+  });
+
+  app.post<{ Params: { hid: string; tid: string }; Body: { agent?: string; fresh?: boolean } }>('/api/corrals/:hid/tasks/:tid/dispatch', async (req, reply) => {
+    const c = taskOr404(req.params.hid, req.params.tid, reply);
+    if (!c) return;
+    const { agent, fresh } = req.body ?? {};
+    if (agent !== undefined && (typeof agent !== 'string' || !c.agents.some((a) => a.id === agent))) return fail(reply, 404, { error: 'unknown agent' });
+    if (fresh !== undefined && typeof fresh !== 'boolean') return fail(reply, 400, { error: 'fresh must be a boolean' });
+    return guarded(`${c.hid}/task/${req.params.tid}`, reply, async () => {
+      const r = await cli.dispatch(c.hid, req.params.tid, agent, fresh);
+      return r.ok ? { ok: true } : cliFail(reply, r);
+    });
+  });
+
+  app.put<{ Params: { hid: string }; Body: { name?: string; tracker?: string[]; story?: string } }>('/api/corrals/:hid/flow', async (req, reply) => {
+    const c = corralOr404(req.params.hid, reply);
+    if (!c) return;
+    const { name, tracker, story } = req.body ?? {};
+    // custom flows live in <project>/.drover/flows or ~/.claude/drover/flows; drover.sh validates them
+    if (name !== undefined && (typeof name !== 'string' || !(FLOWS as readonly string[]).includes(name) && !KEBAB_RE.test(name))) return fail(reply, 400, { error: 'bad flow name' });
+    if (tracker !== undefined && (!Array.isArray(tracker) || tracker.some((t) => !(TRACKER_STEPS as readonly unknown[]).includes(t)))) return fail(reply, 400, { error: 'bad tracker steps' });
+    if (name === undefined && tracker === undefined) return fail(reply, 400, { error: 'name or tracker required' });
+    if (story !== undefined && (typeof story !== 'string' || !c.stories.some((s) => s.id === story))) return fail(reply, 404, { error: 'unknown story' });
+    return guarded(`${c.hid}/flow`, reply, async () => {
+      const r = await cli.flow(c.hid, name, tracker, story);
+      return r.ok ? { ok: true } : cliFail(reply, r);
+    });
+  });
+
   app.get<{ Params: { hid: string }; Querystring: { before?: string } }>('/api/corrals/:hid/messages', async (req, reply) => {
     if (!corralOr404(req.params.hid, reply)) return;
     const before = Number(req.query.before);
@@ -170,12 +264,14 @@ export function registerRoutes(app: FastifyInstance, { store, cli, root, project
     return { messages: parseMessages(t.lines.join('\n')), offset: t.offset };
   });
 
-  app.delete<{ Params: { hid: string; id: string } }>('/api/corrals/:hid/agents/:id', async (req, reply) => {
+  app.delete<{ Params: { hid: string; id: string }; Querystring: { reason?: string } }>('/api/corrals/:hid/agents/:id', async (req, reply) => {
     const c = corralOr404(req.params.hid, reply);
     if (!c || badId(req.params.id, reply)) return;
     if (!c.agents.some((a) => a.id === req.params.id)) return fail(reply, 404, { error: 'unknown agent' });
+    const reason = req.query.reason === undefined ? undefined : text(req.query.reason, 2000);
+    if (req.query.reason !== undefined && !reason) return fail(reply, 400, { error: 'bad reason' });
     return guarded(`${c.hid}/${req.params.id}`, reply, async () => {
-      const r = await cli.kill(c.hid, req.params.id);
+      const r = await cli.kill(c.hid, req.params.id, reason);
       return r.ok ? { ok: true } : cliFail(reply, r);
     });
   });

@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events';
 import { open, readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { HID_RE } from '@droverstatus/shared';
-import type { Agent, AgentStatus, Corral, Liveness, DocEntry, Message, ReportMeta, Story, StoryMode, Task } from '@droverstatus/shared';
+import type { Agent, AgentStatus, Corral, Flow, Liveness, DocEntry, Message, ReportMeta, Story, StoryMode, Task } from '@droverstatus/shared';
 
 async function stamp(file: string): Promise<string | undefined> {
   try {
@@ -140,11 +140,18 @@ export async function tailLines(file: string, cap = TAIL_CAP, end?: number): Pro
 /** `task set k=v` stores strings; tolerate missing/odd fields */
 function normTask(t: Partial<Task>): Task {
   const list = (v: unknown) => (Array.isArray(v) ? v.map(String) : []);
-  return { ...t, id: String(t.id ?? ''), title: String(t.title ?? ''), acceptance: list(t.acceptance), depends_on: list(t.depends_on), state: String(t.state ?? 'todo'), attempts: Number(t.attempts) || 0, story: t.story == null ? undefined : String(t.story), kind: t.kind == null ? undefined : String(t.kind) };
+  return { ...t, id: String(t.id ?? ''), title: String(t.title ?? ''), acceptance: list(t.acceptance), depends_on: list(t.depends_on), state: String(t.state ?? 'todo'), attempts: Number(t.attempts) || 0, story: t.story == null ? undefined : String(t.story), kind: t.kind == null ? undefined : String(t.kind), approved: Array.isArray(t.approved) ? list(t.approved) : undefined };
+}
+
+function normFlow(f: unknown): Flow | undefined {
+  if (!f || typeof f !== 'object') return undefined;
+  const x = f as Partial<Flow>;
+  const list = (v: unknown) => (Array.isArray(v) ? v.map(String) : []);
+  return { name: String(x.name ?? ''), steps: list(x.steps), tracker: list(x.tracker), file: typeof x.file === 'string' ? x.file : undefined };
 }
 
 function normStory(s: Partial<Story>): Story {
-  return { ...s, id: String(s.id ?? ''), title: String(s.title ?? ''), status: String(s.status ?? 'backlog') };
+  return { ...s, id: String(s.id ?? ''), title: String(s.title ?? ''), status: String(s.status ?? 'backlog'), flow: normFlow(s.flow) };
 }
 
 const byOrder = (a: Story, b: Story) => (a.order ?? Infinity) - (b.order ?? Infinity) || a.id.localeCompare(b.id, undefined, { numeric: true });
@@ -206,6 +213,7 @@ interface RawAgent {
   tab_id?: number;
   pane_id?: string;
   purpose?: string;
+  perm?: string;
   cwd?: string;
   worktree?: string | null;
   story?: string | null;
@@ -222,6 +230,7 @@ interface RawRegistry {
   agents?: Record<string, RawAgent | undefined>;
   drover?: { mode?: string; model?: string; session_id?: string; tab_id?: number };
   story_mode?: StoryMode;
+  flow?: Flow | null;
   schema?: number;
   drover_version?: string;
 }
@@ -239,6 +248,7 @@ export async function buildCorral(root: string, hid: string, liveness: Liveness)
       tab_id: a?.tab_id,
       pane_id: a?.pane_id,
       purpose: a?.purpose,
+      perm: a?.perm,
       cwd: a?.cwd,
       worktree: a?.worktree,
       story: a?.story ?? undefined,
@@ -272,6 +282,7 @@ export async function buildCorral(root: string, hid: string, liveness: Liveness)
     tasks: Array.isArray(tasks) ? tasks.filter((t) => t && typeof t === 'object').map(normTask) : [],
     stories: Array.isArray(stories) ? stories.filter((s) => s && typeof s === 'object').map(normStory).sort(byOrder) : [],
     story_mode: reg.story_mode && typeof reg.story_mode === 'object' ? reg.story_mode : undefined,
+    flow: normFlow(reg.flow),
     messages: parseMessages(messages?.lines.join('\n') ?? ''),
     messages_total: messages?.total ?? 0,
     messages_offset: messages?.offset ?? 0,

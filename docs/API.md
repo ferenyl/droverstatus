@@ -26,13 +26,20 @@ Sessions use the cookie `droverstatus_session` (`__Host-droverstatus_session` wi
 |---|---|---|---|
 | GET | `/api/corrals` | | `Corral[]` |
 | GET | `/api/events` | | SSE stream, see below |
-| POST | `/api/corrals` | `{ slug, dir, model?, brief? }` (`dir` absolute, existing) | 201 `{ hid }` |
+| POST | `/api/corrals` | `{ slug, dir, brief? }` (`dir` absolute, existing) | 201 `{ hid }` |
 | DELETE | `/api/corrals/:hid` | `?worktrees=remove\|keep` | `{ ok }`; 409 with `worktrees` (close exits 4) when worktrees exist; 409 if already closed |
 | POST | `/api/corrals/:hid/revive` | | `{ ok }`; 409 if closed or alive |
 | POST | `/api/corrals/:hid/messages` | `{ message, to? }` (`to` = `drover` or an agent id) | `{ ok }` |
 | GET | `/api/corrals/:hid/messages` | `?before=<byte offset>` | `{ messages, offset }` (200 per page, `offset` for the next older page) |
 | POST | `/api/corrals/:hid/agents/:id/flush` | | `{ ok }` |
-| DELETE | `/api/corrals/:hid/agents/:id` | | `{ ok }` (kills the agent) |
+| DELETE | `/api/corrals/:hid/agents/:id` | `?reason=` (optional) | `{ ok }` (kills the agent) |
+| PUT | `/api/corrals/:hid/agents/:id/model` | `{ model }` (`haiku\|sonnet\|opus\|fable`) | `{ ok }` (waits for idle, types `/model`) |
+| PUT | `/api/corrals/:hid/agents/:id/perm` | `{ mode }` (`default\|acceptEdits\|plan\|auto\|bypassPermissions`) | `{ ok }` (relaunches the agent) |
+| PUT | `/api/corrals/:hid/agents/:id/purpose` | `{ purpose }` | `{ ok }` (relaunches the agent) |
+| POST | `/api/corrals/:hid/agents/:id/prlink` | | `{ url }` (pushes the agent's branch; runs with `--yes`) |
+| POST | `/api/corrals/:hid/tasks/:tid/dispatch` | `{ agent?, fresh? }` | `{ ok }` (`fresh` clears the agent's context first) |
+| POST | `/api/corrals/:hid/tasks/:tid/approve` | `{ scope }` | `{ ok }` (write approval for the task's owner) |
+| PUT | `/api/corrals/:hid/flow` | `{ name?, tracker?, story? }` (`name` built-in, custom kebab-case, or `ask` to clear; `tracker` subset of `assign,status,comment,link`) | `{ ok }` |
 | GET | `/api/corrals/:hid/agents/:id/screen` | `?lines=1..500` (default 40) | `{ screen }` |
 | GET | `/api/corrals/:hid/worktrees` | | `Worktree[]` (runs git status per worktree) |
 | GET | `/api/corrals/:hid/brief` | | `text/markdown` |

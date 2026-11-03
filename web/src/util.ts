@@ -69,3 +69,9 @@ export const savePref = (k: string, v: string) => {
     /* ignore */
   }
 };
+
+/** kill confirmation with an optional reason (drover.sh kill --reason); undefined = cancelled */
+export function askKill(id: string): { reason?: string } | undefined {
+  const r = prompt(`Kill agent ${id}? Optional reason:`, '');
+  return r === null ? undefined : { reason: r.trim() || undefined };
+}

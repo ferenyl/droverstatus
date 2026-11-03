@@ -2,10 +2,11 @@
 import { useState } from 'react';
 import type { Corral } from '@droverstatus/shared';
 import { api } from '../api';
-import { badge, counts, errMsg, loadPref, savePref } from '../util';
+import { askKill, badge, counts, errMsg, loadPref, savePref } from '../util';
 import type { Tab } from '../route';
 import { AgentTable } from './AgentTable';
-import { TaskList } from './TaskList';
+import { TaskList, taskActions } from './TaskList';
+import { FlowControl } from './FlowControl';
 import { CorralBoard } from './CorralBoard';
 import { MessageFeed } from './MessageFeed';
 import { Doc } from './Doc';
@@ -65,6 +66,7 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
                 </dd>
                 {c.drover_version && <><dt>plugin</dt><dd data-testid="drover-version" className="mono">{c.drover_version}{c.schema != null && ` · schema ${c.schema}`}</dd></>}
                 <dt>drover</dt><dd>{c.drover.model} <span data-testid="drover-state" className={`pill pill-${c.drover.status.state}`}><StateIcon state={c.drover.status.state} />{c.drover.status.state}</span></dd>
+                {!c.closed && <><dt>flow</dt><dd><FlowControl key={JSON.stringify(c.flow ?? null)} hid={c.hid} flow={c.flow} onError={p.onError} /></dd></>}
                 <dt>agents</dt><dd className="mono">{n.busy} busy · {n.idle} idle · {n.blocked} blocked</dd>
                 {c.story_mode && (
                   <>
@@ -81,7 +83,7 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
             <section className="card-x">
               <h3><Icon n="screen" /> Agents</h3>
               {c.agents.length === 0 ? <p className="empty-note">No agents yet</p> : (
-                <AgentTable corral={c} onScreen={p.onOpenAgent} onKill={(id) => confirm(`Kill agent ${id}?`) && act(() => api.kill(c.hid, id))} />
+                <AgentTable corral={c} onScreen={p.onOpenAgent} onKill={(id) => { const k = askKill(id); if (k) void act(() => api.kill(c.hid, id, k.reason)); }} />
               )}
             </section>
           </>
@@ -95,7 +97,7 @@ export function CorralView(p: { corral: Corral; tab: Tab; onTab: (t: Tab) => voi
                 {c.stories.map((s) => <option key={s.id} value={s.id}>{s.id} — {s.title}</option>)}
               </select>
             )}
-            {c.tasks.length === 0 ? <p className="empty-note p">No tasks</p> : <TaskList tasks={shownTasks} all={c.tasks} />}
+            {c.tasks.length === 0 ? <p className="empty-note p">No tasks</p> : <TaskList tasks={shownTasks} all={c.tasks} actions={c.closed ? undefined : taskActions(c.hid, act)} />}
           </section>
         )}
         {tab === 'messages' && <MessageFeed corral={c} onError={p.onError} />}

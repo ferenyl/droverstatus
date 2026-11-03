@@ -2,11 +2,12 @@
 import { Fragment } from 'react';
 import type { Agent, Corral } from '@droverstatus/shared';
 import { api } from '../api';
-import { errMsg, isStuck, relTime, type Node } from '../util';
+import { askKill, errMsg, isStuck, relTime, type Node } from '../util';
 import type { Tab } from '../route';
 import { AgentScreen } from './AgentScreen';
 import { Reports } from './Reports';
-import { TaskList } from './TaskList';
+import { TaskList, taskActions } from './TaskList';
+import { AgentControls } from './AgentControls';
 import { Composer, MessageFeed } from './MessageFeed';
 import { PaneHeader } from './PaneHeader';
 import { Tabs } from './Tabs';
@@ -43,6 +44,7 @@ export function NodeDetail(p: { corral: Corral; node: Node; tab: Tab; onTab: (t:
     ? [
         ['model', a.model ?? ''],
         ['purpose', a.purpose ?? ''],
+        ...(a.perm ? [['permission mode', <span data-testid="agent-perm-mode" className="mono">{a.perm}</span>] as [string, React.ReactNode]] : []),
         ['tab/pane', <span className="mono">{`${a.tab_name ?? ''}${a.pane_id ? `/${a.pane_id}` : ''}`}</span>],
         ['updated', <span className="mono">{relTime(a.status.at)}</span>],
         ...(a.status.since ? [['state since', <span data-testid="state-since" className="mono">{relTime(a.status.since)}</span>] as [string, React.ReactNode]] : []),
@@ -66,7 +68,7 @@ export function NodeDetail(p: { corral: Corral; node: Node; tab: Tab; onTab: (t:
         extra={!c.closed && c.liveness !== 'dead' && isStuck(a?.status ?? d.status) && <span data-testid="agent-stuck" className="pill pill-blocked">stuck?</span>}
         actions={a && <>
           {!!a.queued && a.status.state !== 'blocked' && <button className="btn btn-sm btn-outline theme-primary" data-testid={`agent-flush-${a.id}`} onClick={() => api.flush(c.hid, a.id).catch((e) => onError(errMsg(e)))}><Icon n="send" /> Flush ({a.queued})</button>}
-          <button className="btn btn-sm btn-outline theme-danger" data-testid={`agent-kill-${a.id}`} onClick={() => confirm(`Kill agent ${a.id}?`) && api.kill(c.hid, a.id).catch((e) => onError(errMsg(e)))}><Icon n="x" /> Kill</button>
+          <button className="btn btn-sm btn-outline theme-danger" data-testid={`agent-kill-${a.id}`} onClick={() => { const k = askKill(a.id); if (k) api.kill(c.hid, a.id, k.reason).catch((e) => onError(errMsg(e))); }}><Icon n="x" /> Kill</button>
         </>}
       />
       <Tabs
@@ -81,8 +83,11 @@ export function NodeDetail(p: { corral: Corral; node: Node; tab: Tab; onTab: (t:
         ]}
       />
       <div className={`tab-body ${tab === 'screen' ? 'fill' : ''}`} data-testid={`tabpanel-${tab}`}>
-        {tab === 'overview' && <section className="card-x"><h3><Icon n="overview" /> {isDrover ? 'Drover' : 'Agent'}</h3><Kv rows={rows} /></section>}
-        {tab === 'tasks' && <section className="card-x flush">{tasks.length === 0 ? <p className="empty-note p">No tasks owned by {id}</p> : <TaskList tasks={tasks} />}</section>}
+        {tab === 'overview' && <>
+          <section className="card-x"><h3><Icon n="overview" /> {isDrover ? 'Drover' : 'Agent'}</h3><Kv rows={rows} /></section>
+          {a && !c.closed && <AgentControls key={`${a.id}:${a.model}:${a.perm}:${a.purpose}`} hid={c.hid} agent={a} onError={onError} />}
+        </>}
+        {tab === 'tasks' && <section className="card-x flush">{tasks.length === 0 ? <p className="empty-note p">No tasks owned by {id}</p> : <TaskList tasks={tasks} actions={c.closed ? undefined : taskActions(c.hid, (f) => f().catch((e) => onError(errMsg(e))))} />}</section>}
         {tab === 'messages' && <MessageFeed corral={c} messages={msgs} compose={id} onError={onError} />}
         {tab === 'reports' && <Reports hid={c.hid} ids={reports} meta={c.report_meta} auto />}
         {tab === 'screen' && (

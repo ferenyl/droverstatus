@@ -2,6 +2,19 @@
 export type AgentState = 'busy' | 'idle' | 'blocked' | 'unknown';
 export type Model = 'haiku' | 'sonnet' | 'opus' | 'fable';
 export const MODELS: Model[] = ['haiku', 'sonnet', 'opus', 'fable'];
+/** claude --permission-mode values offered by `drover.sh perm` */
+export const PERM_MODES = ['default', 'acceptEdits', 'plan', 'auto', 'bypassPermissions'] as const;
+/** drover.sh built-in flows (>= 0.14); `ask` clears the flow */
+export const FLOWS = ['ask', 'none', 'commit', 'local-merge', 'push', 'manual-pr', 'pr', 'pr-draft', 'pr-review', 'pr-approve', 'pr-merge', 'pr-fix', 'full'] as const;
+export const TRACKER_STEPS = ['assign', 'status', 'comment', 'link'] as const;
+
+/** registry.json / stories.json `flow` (drover >= 0.14) */
+export interface Flow {
+  name: string;
+  steps: string[];
+  tracker?: string[];
+  file?: string;
+}
 
 export interface AgentStatus {
   state: AgentState;
@@ -20,6 +33,8 @@ export interface Agent {
   tab_id?: number;
   pane_id?: string;
   purpose?: string;
+  /** permission mode set by `drover.sh perm` */
+  perm?: string;
   cwd?: string;
   worktree?: string | null;
   story?: string;
@@ -47,6 +62,8 @@ export interface Task {
   story?: string;
   /** plan | impl | review | pr; absent = impl */
   kind?: string;
+  /** scopes granted by `drover.sh approve` */
+  approved?: string[];
   created_at?: string;
   started_at?: string;
   finished_at?: string;
@@ -98,6 +115,7 @@ export interface Story {
   order?: number;
   branch?: string | null;
   pr?: StoryPr | null;
+  flow?: Flow | null;
   clarified?: boolean;
   updated_at?: string;
 }
@@ -130,6 +148,8 @@ export interface Corral {
   tasks: Task[];
   stories: Story[];
   story_mode?: StoryMode;
+  /** corral flow; undefined = ask */
+  flow?: Flow;
   /** last 200 only; older via GET /corrals/:hid/messages?before= */
   messages: Message[];
   messages_total: number;

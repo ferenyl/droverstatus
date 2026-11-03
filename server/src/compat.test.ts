@@ -42,7 +42,7 @@ describe('0.9.0 formats', () => {
 
 describe('fake drover.sh is faithful to 0.9.0', () => {
   it('new prints HID= amid the banner', async () => {
-    const r = await cli.newDrover('x', root, 'sonnet', 'brief');
+    const r = await cli.newDrover('x', root, 'brief');
     expect(r.ok && /^[0-9a-f]{8}$/.test(r.hid ?? '')).toBe(true);
     expect(JSON.parse(readFileSync(join(root, r.hid!, 'registry.json'), 'utf8')).drover.mode).toBe('corral');
   });

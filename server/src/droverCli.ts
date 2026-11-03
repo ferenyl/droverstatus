@@ -37,12 +37,12 @@ export class DroverCli {
     });
   }
 
-  async newDrover(slug: string, dir: string, model: string, brief: string): Promise<CliResult & { hid?: string }> {
+  async newDrover(slug: string, dir: string, brief: string): Promise<CliResult & { hid?: string }> {
     const tmp = await mkdtemp(join(tmpdir(), 'droverstatus-'));
     try {
       const file = join(tmp, 'brief.md');
       await writeFile(file, brief);
-      const r = await this.run(['new', slug, dir, '--model', model, '--brief', file], 120_000, true);
+      const r = await this.run(['new', slug, dir, '--brief', file], 120_000, true);
       return { ...r, hid: /^HID=([0-9a-f]{8})$/m.exec(r.stdout)?.[1] };
     } finally {
       await rm(tmp, { recursive: true, force: true });
@@ -55,8 +55,39 @@ export class DroverCli {
     return this.run(['close', hid, ...flag], 90_000, true);
   }
 
-  kill(hid: string, id: string) {
-    return this.run(['kill', hid, '--force', id], undefined, true);
+  kill(hid: string, id: string, reason?: string) {
+    return this.run(['kill', hid, '--force', id, ...(reason ? ['--reason', reason] : [])], undefined, true);
+  }
+
+  model(hid: string, id: string, model: string) {
+    // waits for the agent to go idle before typing /model
+    return this.run(['model', hid, '--force', id, model], 120_000, true);
+  }
+
+  perm(hid: string, id: string, mode: string) {
+    return this.run(['perm', hid, '--force', id, mode], 120_000, true);
+  }
+
+  purpose(hid: string, id: string, text: string) {
+    return this.run(['purpose', hid, '--force', id, text], 120_000, true);
+  }
+
+  /** the user clicked it: that is the yes --yes stands for */
+  prlink(hid: string, id: string) {
+    return this.run(['prlink', hid, '--force', id, '--yes'], 120_000, true);
+  }
+
+  approve(hid: string, tid: string, scope: string) {
+    return this.run(['approve', hid, '--force', tid, scope], undefined, true);
+  }
+
+  dispatch(hid: string, tid: string, agent?: string, fresh = false) {
+    return this.run(['dispatch', hid, '--force', tid, ...(agent ? [agent] : []), ...(fresh ? ['--fresh'] : [])], 120_000, true);
+  }
+
+  /** name: built-in/custom flow or `ask` (clears); tracker: steps, [] = none, undefined = keep */
+  flow(hid: string, name?: string, tracker?: string[], story?: string) {
+    return this.run(['flow', hid, '--force', ...(name ? [name] : []), ...(tracker ? [`tracker=${tracker.join(',') || '-'}`] : []), ...(story ? ['--story', story] : [])], 120_000, true);
   }
 
   send(hid: string, msg: string, to = 'drover') {

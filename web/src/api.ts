@@ -36,13 +36,20 @@ export const api = {
   login: (b: LoginBody) => call('POST', '/api/auth/login', b),
   logout: () => call('POST', '/api/auth/logout'),
   changePassword: (b: PasswordBody) => call('POST', '/api/auth/password', b),
-  newDrover: (b: { slug: string; dir: string; model: Model; brief: string }) => call<{ hid: string }>('POST', '/api/corrals', b),
+  newDrover: (b: { slug: string; dir: string; brief: string }) => call<{ hid: string }>('POST', '/api/corrals', b),
   close: (hid: string, worktrees?: 'remove' | 'keep') =>
     call('DELETE', `${base(hid)}${worktrees ? `?worktrees=${worktrees}` : ''}`),
   revive: (hid: string) => call('POST', `${base(hid)}/revive`),
   send: (hid: string, message: string, to?: string) => call('POST', `${base(hid)}/messages`, { message, to }),
   flush: (hid: string, id: string) => call('POST', `${base(hid)}/agents/${id}/flush`),
-  kill: (hid: string, id: string) => call('DELETE', `${base(hid)}/agents/${id}`),
+  kill: (hid: string, id: string, reason?: string) => call('DELETE', `${base(hid)}/agents/${id}${reason ? `?reason=${encodeURIComponent(reason)}` : ''}`),
+  model: (hid: string, id: string, model: Model) => call('PUT', `${base(hid)}/agents/${id}/model`, { model }),
+  perm: (hid: string, id: string, mode: string) => call('PUT', `${base(hid)}/agents/${id}/perm`, { mode }),
+  purpose: (hid: string, id: string, purpose: string) => call('PUT', `${base(hid)}/agents/${id}/purpose`, { purpose }),
+  prlink: (hid: string, id: string) => call<{ url: string }>('POST', `${base(hid)}/agents/${id}/prlink`),
+  approve: (hid: string, tid: string, scope: string) => call('POST', `${base(hid)}/tasks/${encodeURIComponent(tid)}/approve`, { scope }),
+  dispatch: (hid: string, tid: string, fresh = false) => call('POST', `${base(hid)}/tasks/${encodeURIComponent(tid)}/dispatch`, { fresh }),
+  flow: (hid: string, b: { name?: string; tracker?: string[]; story?: string }) => call('PUT', `${base(hid)}/flow`, b),
   screen: (hid: string, id: string, lines = 40) =>
     call<{ screen: string }>('GET', `${base(hid)}/agents/${id}/screen?lines=${lines}`),
   olderMessages: (hid: string, before: number) =>

@@ -62,13 +62,12 @@ test('new drover', async ({ page }) => {
   await expect(page.getByTestId('new-submit')).toBeDisabled();
   await page.getByTestId('new-slug').fill('fresh');
   await page.getByTestId('new-dir').fill(root);
-  await page.getByTestId('new-model').selectOption('haiku');
   await page.getByTestId('new-brief').fill('do things');
   await page.getByTestId('new-submit').click();
   await expect(page.getByTestId('new-drover-dialog')).toHaveCount(0);
   await expect(page.getByTestId('corral-view')).toContainText('fresh');
   await expect(page.getByTestId('corral-badge')).toHaveText('alive');
-  expect(calls()).toMatch(/^\S+ new fresh \S+ --model haiku --brief \S+$/m);
+  expect(calls()).toMatch(/^\S+ new fresh \S+ --brief \S+$/m);
 });
 
 test('kill agent', async ({ page }) => {
@@ -203,7 +202,7 @@ test('rejects non-local Host header with 403', async ({ request }) => {
   expect(bad.status()).toBe(403);
   const post = await request.post(`${API}/api/corrals`, {
     headers: { host: 'evil.example.com' },
-    data: { slug: 'evil', dir: root, model: 'sonnet', brief: '' },
+    data: { slug: 'evil', dir: root, brief: '' },
   });
   expect(post.status()).toBe(403);
   expect(calls()).not.toMatch(/ new evil /);
